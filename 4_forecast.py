@@ -28,5 +28,19 @@ st.logo(favicon, size="large")
 
 st.subheader("客数予測")
 
-
+if "df_customers" in st.session_state:
+    st.write("#### df_customers")
+    st.session_state["df_customers"]
+if "df_items" in st.session_state:
+    st.write("#### df_items")
+    st.session_state["df_items"]
+if "df_syllabus_west" in st.session_state:
+    st.write("#### df_syllabus_west")
+    st.session_state["df_syllabus_west"]
+if "df_syllabus_east" in st.session_state:
+    st.write("#### df_syllabus_east")
+    st.session_state["df_syllabus_east"]
+if "df_calendar" in st.session_state:
+    st.write("#### df_calendar")
+    st.session_state["df_calendar"]
 

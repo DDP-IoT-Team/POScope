@@ -219,7 +219,6 @@ def check_syllabus_range(df: pd.DataFrame) -> bool:
     """
     terms = ["SPR", "SMR", "AUT", "WTR"]
     cols = sorted([[int(col[:4]), terms.index(col[4:]), col] for col in df.columns])
-    print(cols)
     prev_year = cols[0][0]
     prev_term_idx = cols[0][1]
     for year, term_idx, _ in cols[1:]:
@@ -264,6 +263,21 @@ def when_calendar_changed() -> None:
     The message is shown only when the user has not changed the uploaded files since the last successful upload.
     """
     st.session_state["calendar_changed"] = True
+
+
+def load_uploaded_calendar(file: UploadedFile) -> pd.DataFrame:
+    """
+    Description
+    """
+    df_calendar = pd.read_excel(file)
+    return df_calendar
+
+
+def set_session_state_calendar(df_cal: pd.DataFrame) -> None:
+    """
+    Description
+    """
+    st.session_state["df_calendar"] = df_cal
 
 
 #-----------------------------------------Contents-----------------------------------------
@@ -502,9 +516,32 @@ with st.container(border=True):
         on_change=when_calendar_changed
     )
     if st.button(label="使用するデータを決定する", key="button_calendar", disabled=button_controller("uploaded_calendar")):
-        pass
+        with st.spinner("データを読み込んでいます...", show_time=True):
+            try:
+                df_calendar = load_uploaded_calendar(st.session_state["uploaded_calendar"])
+                if df_calendar.empty:
+                    st.error("アップロードされたファイルには有効なデータが含まれていません。")
+                else:
+                    set_session_state_calendar(df_calendar)
+                    st.success(
+                        """
+                        :material/check_circle: 以下のカレンダー形式データのアップロードが完了しました。
+                        """
+                    )
+                    st.session_state["calendar_changed"] = False
+            except Exception as e:
+                st.error("データの読み込みに失敗しました。")
+                st.write(e)
     else:
-        pass
+        # This message is shown when the user come back from other pages to this page
+        # only if the user has not changed the uploaded files since the last successful upload.
+        # If the user changed the files, this message disappears.
+        if "df_calendar" in st.session_state and not st.session_state["calendar_changed"]:
+            st.success(
+                """
+                :material/check_circle: 以下のカレンダー形式データのアップロードが完了しています。
+                """
+            )
     with st.expander(":material/warning: （重要）ファイル形式について"):
         st.markdown(
             """
