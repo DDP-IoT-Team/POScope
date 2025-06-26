@@ -3,12 +3,13 @@ import pandas as pd
 import datetime
 from PIL import Image
 import plotly.express as px
+import plotly.graph_objects as go
 
 
 #-----------------------------------------Settings-----------------------------------------
 
 favicon = Image.open("static/favicon.ico")
-
+sleeping = Image.open("static/sleeping_hamburger.png")
 st.set_page_config(
     page_title="データ可視化", 
     layout="wide",
@@ -17,7 +18,7 @@ st.set_page_config(
     menu_items={
         'Get help': "https://www.example.com/help", # This will be replaced with GitHub Pages URL
         'Report a bug': "https://forms.gle/ARs9Md4jqjHxJwAW9", # Google Forms
-        'About': "#### [App_name]"
+        'About': "#### POScope \nv1.0.0"
     }
 )
 
@@ -36,6 +37,9 @@ def convert_for_download(df: pd.DataFrame, index: bool) -> bytes:
 
 @st.cache_data
 def process_cus1(df_cus: pd.DataFrame, date: tuple[datetime.date], time_span: str, business_hours: str, area: str):
+    """
+    Description
+    """
     left_date = pd.Timestamp(date[0])
     right_date = pd.Timestamp(date[1]) + pd.Timedelta("1D")
     df_cus = df_cus[(left_date <= df_cus["開始日時"]) & (df_cus["開始日時"] < right_date)]
@@ -54,8 +58,6 @@ def process_cus1(df_cus: pd.DataFrame, date: tuple[datetime.date], time_span: st
     df_cus = df_cus.unstack(level=0)
     df_cus.index = list(map(lambda x: x.strftime("%H:%M"), df_cus.index))
     df_cus.columns = df_cus.columns.droplevel(0)
-    #if date[0] != date[1]:
-    #    df_cus["平均"] = df_cus.mean(axis="columns")
     return df_cus
 
 
@@ -74,10 +76,13 @@ def process_cus2(df_cus: pd.DataFrame, date: tuple[datetime.date], business_hour
     else:
         df_cus = df_cus.between_time("11:00", "19:30")
     df_cus = df_cus.reset_index(drop=False)
-    df_cus = df_cus.groupby("アカウント名").resample("1D", on="開始日時")["客数"].sum()
-    df_cus = df_cus.to_frame().unstack(level=0)
-    df_cus.columns = df_cus.columns.droplevel(0)
-    return df_cus
+    if df_cus.empty:
+        return pd.DataFrame()
+    else:
+        df_cus = df_cus.groupby("アカウント名").resample("1D", on="開始日時")["客数"].sum()
+        df_cus = df_cus.to_frame().unstack(level=0)
+        df_cus.columns = df_cus.columns.droplevel(0)
+        return df_cus
 
 
 @st.cache_data
@@ -127,6 +132,8 @@ def process_itm1(df_itm: pd.DataFrame, date: tuple[datetime.date], business_hour
     else:
         df_itm = df_itm.between_time("11:00", "19:30")
     df_itm = df_itm.reset_index(drop=False)
+    if df_itm.empty:
+        return pd.DataFrame()
     df_itm = df_itm.groupby("アカウント名").resample("1D", on="開始日時")[aggregation].sum()
     df_itm = df_itm.to_frame().unstack(level=0)
     df_itm.columns = df_itm.columns.droplevel(0)
@@ -135,6 +142,8 @@ def process_itm1(df_itm: pd.DataFrame, date: tuple[datetime.date], business_hour
 
 @st.cache_data
 def candidates_itm1(df_itm: pd.DataFrame, date: tuple[datetime.date], business_hours: str, area: str, method: str):
+    if len(date) != 2:
+        return []
     left_date = pd.Timestamp(date[0])
     right_date = pd.Timestamp(date[1]) + pd.Timedelta("1D")
     df_itm = df_itm[(left_date <= df_itm["開始日時"]) & (df_itm["開始日時"] < right_date)]
@@ -173,6 +182,8 @@ def process_itm2(df_itm: pd.DataFrame, date: tuple[datetime.date], business_hour
     else:
         df_itm = df_itm.between_time("11:00", "19:30")
     df_itm = df_itm.reset_index(drop=False)
+    if df_itm.empty:
+        return pd.DataFrame()
     df_itm = df_itm.groupby("アカウント名").resample("1D", on="開始日時")[aggregation].sum()
     df_itm = df_itm.to_frame().unstack(level=0)
     df_itm.columns = df_itm.columns.droplevel(0)
@@ -181,6 +192,8 @@ def process_itm2(df_itm: pd.DataFrame, date: tuple[datetime.date], business_hour
 
 @st.cache_data
 def candidates_itm2(df_itm: pd.DataFrame, date: tuple[datetime.date], business_hours: str, area: str):
+    if len(date) != 2:
+        return []
     left_date = pd.Timestamp(date[0])
     right_date = pd.Timestamp(date[1]) + pd.Timedelta("1D")
     df_itm = df_itm[(left_date <= df_itm["開始日時"]) & (df_itm["開始日時"] < right_date)]
@@ -201,7 +214,6 @@ def candidates_itm2(df_itm: pd.DataFrame, date: tuple[datetime.date], business_h
 #-----------------------------------------Contents-----------------------------------------
 
 st.logo(favicon, size="large")
-
 st.title("データの可視化")
 
 # Check if the data has been uploaded
@@ -213,6 +225,7 @@ if "df_customers" not in st.session_state:
 df_cus: pd.DataFrame = st.session_state["df_customers"]
 df_itm: pd.DataFrame = st.session_state["df_items"]
 
+# Set session state variables
 if st.session_state["west_pos"]:
     if st.session_state["east_pos"]:
         min_date = min(st.session_state["west_date_min"], 
@@ -229,9 +242,10 @@ else:
 # visualization
 st.subheader("客数の可視化", divider="gray")
 
-# number of customers by time of day
+# 1. number of customers by time of day
 with st.container(border=True):
     st.write("##### 1日の時間帯ごとの客数の推移")
+    # Options
     with st.container(border=True):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -248,7 +262,7 @@ with st.container(border=True):
                 options=["5min", "10min", "30min"], 
                 index=0, 
                 accept_new_options=False, 
-                key="time_span1"
+                key="span1"
             )
         with col3:
             st.selectbox(
@@ -256,30 +270,64 @@ with st.container(border=True):
                 options=["昼（11:00～14:00）", "夜（17:30～19:30）", "昼・夜"], 
                 index=0, 
                 accept_new_options=False, 
-                key="business_hours1"
+                key="bsh1"
             )
         with col4:
             st.selectbox(
                 label=":material/storefront: 店舗", 
-                options=["西食堂", "東カフェテリア"], 
+                options=["西食堂", "東カフェテリア"], # 両方の実装
                 accept_new_options=False, 
                 index=0, 
                 key="area1"
             )
+    # Data processing and visualization
     with st.container(border=True):
         if len(st.session_state["date1"]) == 2:
-            df_cust_time = process_cus1(df_cus, 
-                                        st.session_state["date1"], 
-                                        st.session_state["time_span1"],
-                                        st.session_state["business_hours1"], 
-                                        st.session_state["area1"])
-            st.line_chart(data=df_cust_time) # st.line_chart() might be replaced with st.plotly_chart() for more customization
+            df_cus_time = process_cus1(
+                df_cus, 
+                st.session_state["date1"], 
+                st.session_state["span1"],
+                st.session_state["bsh1"], 
+                st.session_state["area1"]
+            )
+            if not df_cus_time.empty:
+                fig = go.Figure()
+                for col in df_cus_time.columns:
+                    if col.weekday() in [5, 6]:  # Saturday and Sunday
+                        continue
+                    fig.add_trace(go.Scatter(
+                        x=df_cus_time.index, 
+                        y=df_cus_time[col], 
+                        mode="lines+markers", 
+                        name=col.strftime("%Y-%m-%d"), 
+                        line=dict(color="rgba(0, 104, 201, 0.5)"), 
+                        marker=dict(size=5), 
+                        hovertemplate="日付: %{meta}<br>時間: %{x}<br>客数: %{y}人<extra></extra>", 
+                        meta=col.strftime("%Y-%m-%d (%a)")
+                    ))
+                # Plot average if there are multiple columns
+                if len(df_cus_time.columns) >= 2:
+                    # Calculate the average for only weekdays (excluding weekends)
+                    ave = df_cus_time[[col for col in df_cus_time.columns if col.weekday() not in [5, 6]]].mean(axis="columns")
+                    fig.add_trace(go.Scatter(
+                        x=df_cus_time.index, 
+                        y=ave, 
+                        mode="lines+markers", 
+                        name="平均", 
+                        line=dict(color="rgba(0, 0, 0, 1)", dash="dot"), 
+                        marker=dict(size=5), 
+                        hovertemplate="平均<br>時間: %{x}<br>客数: %{y:.1f}人<extra></extra>"
+                    ))
+                st.plotly_chart(fig)
+            else:
+                st.image(sleeping)
+    # Data
     with st.expander("データを見る", expanded=False):
         if len(st.session_state["date1"]) == 2:
-            st.dataframe(df_cust_time)
+            st.dataframe(df_cus_time)
             st.download_button(
                 label=":material/download: `.csv`でダウンロード", 
-                data=convert_for_download(df_cust_time, index=True), 
+                data=convert_for_download(df_cus_time, index=True), 
                 file_name=f"customers_by_time_{st.session_state['date1'][0]}-{st.session_state['date1'][1]}.csv", 
                 mime="text/csv"
             )
@@ -287,9 +335,10 @@ with st.container(border=True):
 # space
 st.write("")
 
-# total number of customers per day
+# 2. total number of customers per day
 with st.container(border=True):
     st.write("##### 1日の合計客数の推移")
+    # Options
     with st.container(border=True):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -306,7 +355,7 @@ with st.container(border=True):
                 options=["昼（11:00～14:00）", "夜（17:30～19:30）", "昼・夜"], 
                 index=0, 
                 accept_new_options=False, 
-                key="business_hours2"
+                key="bsh2"
             )
         with col3:
             st.selectbox(
@@ -314,94 +363,66 @@ with st.container(border=True):
                 options=["西食堂", "東カフェテリア", "両方"], 
                 accept_new_options=False, 
                 index=0, 
-                key="area2"
+                key="area2", 
+                help="「両方」を選択すると、東西店舗の各グラフを重ね合わせて可視化します。"
             )
+    # Data processing and visualization
     with st.container(border=True):
         if len(st.session_state["date2"]) == 2:
-            df_cust_day = process_cus2(
+            df_cus_day = process_cus2(
                 df_cus, 
                 st.session_state["date2"], 
-                st.session_state["business_hours2"], 
+                st.session_state["bsh2"], 
                 st.session_state["area2"]
             )
-            st.line_chart(data=df_cust_day) # st.line_chart() might be replaced with st.plotly_chart() for more customization
+            if not df_cus_day.empty:
+                if "df_calendar" in st.session_state:
+                    df_cus_day_modified = pd.merge(
+                        df_cus_day, 
+                        st.session_state["df_calendar"], 
+                        left_on="開始日時", 
+                        right_on="date", 
+                        how="left"
+                    )
+                    fig = px.line(
+                        df_cus_day_modified, 
+                        x="date", 
+                        y=df_cus_day.columns, 
+                        hover_data=["academic_year", "term", "class", "info"], 
+                        markers=True
+                    )
+                    fig.update_traces(marker=dict(size=5))
+                    st.plotly_chart(fig)
+                else:
+                    pass
+                    fig = px.line(
+                        df_cus_day, 
+                        x=df_cus_day.index, 
+                        y=df_cus_day.columns, 
+                        markers=True
+                    )
+                    fig.update_traces(marker=dict(size=5))
+                    st.plotly_chart(fig)
+            else:
+                st.image(sleeping)
+    # Data
     with st.expander("データを見る", expanded=False):
         if len(st.session_state["date2"]) == 2:
-            st.dataframe(df_cust_day)
+            st.dataframe(df_cus_day)
             st.download_button(
                 label=":material/download: `.csv`でダウンロード", 
-                data=convert_for_download(df_cust_day, index=True), 
-                file_name=f"customers_per_day_{st.session_state['date1'][0]}-{st.session_state['date1'][1]}.csv", 
+                data=convert_for_download(df_cus_day, index=True), 
+                file_name=f"customers_per_day_{st.session_state['date2'][0]}-{st.session_state['date2'][1]}.csv", 
                 mime="text/csv"
             )
         
 # space
 st.write("")
 
-# ratio of payment methods
+# 3. ratio of payment methods
 with st.container(border=True):
     st.write("##### 支払い方法の割合")
-    with st.container(border=True):
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.date_input(
-                label=":material/calendar_month: 日付", 
-                value=(min_date, max_date), 
-                min_value=min_date, 
-                max_value=max_date, 
-                key="date_pm"
-            )
-        with col2:
-            st.selectbox(
-                label=":material/schedule: 営業時間", 
-                options=["昼（11:00～14:00）", "夜（17:30～19:30）", "昼・夜"], 
-                index=0, 
-                accept_new_options=False, 
-                key="business_hours_pm"
-            )
-        with col3:
-            st.selectbox(
-                label=":material/storefront: 店舗", 
-                options=["西食堂", "東カフェテリア", "両方"], 
-                accept_new_options=False, 
-                index=0, 
-                key="area_pm"
-            )
-    with st.container(border=True):
-        if len(st.session_state["date_pm"]) == 2:
-            df_pm = filter_pm(
-                df_cus, 
-                st.session_state["date_pm"], 
-                st.session_state["business_hours_pm"], 
-                st.session_state["area_pm"]
-            )
-            fig = px.pie(
-                df_pm, 
-                names="支払い方法", 
-                values="カウント"
-            )
-            st.plotly_chart(
-                fig, 
-                use_container_width=True
-            )
-    with st.expander("データを見る", expanded=False):
-        if len(st.session_state["date_pm"]) == 2:
-            st.dataframe(df_pm, hide_index=True)
-            st.download_button(
-                label=":material/download: `.csv`でダウンロード", 
-                data=convert_for_download(df_pm, index=False), 
-                file_name=f"payments_{st.session_state['date1'][0]}-{st.session_state['date1'][1]}.csv", 
-                mime="text/csv"
-            )
-
-# space
-st.write("")
-
-st.subheader("売上の可視化", divider="gray")
-
-# sales by item
-with st.container(border=True):
-    st.write("##### 各商品ごとの売上推移")
+    # Options
     with st.container(border=True):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -418,7 +439,7 @@ with st.container(border=True):
                 options=["昼（11:00～14:00）", "夜（17:30～19:30）", "昼・夜"], 
                 index=0, 
                 accept_new_options=False, 
-                key="business_hours3"
+                key="bsh3"
             )
         with col3:
             st.selectbox(
@@ -426,67 +447,47 @@ with st.container(border=True):
                 options=["西食堂", "東カフェテリア", "両方"], 
                 accept_new_options=False, 
                 index=0, 
-                key="area3"
+                key="area3", 
+                help="「両方」を選択すると、東西両店舗のデータを合算して可視化します。"
             )
-        with col4:
-            st.selectbox(
-                label=":material/calculate: 集計方法", 
-                options=["数量", "金額"], 
-                index=0, 
-                accept_new_options=False,
-                key="aggregation3"
-            )
-        with col1:
-            st.selectbox(
-                label=":material/filter_alt: 商品の指定方法", 
-                options=["名前", "バーコード", "SKU"], 
-                index=0, 
-                accept_new_options=False,
-                key="method3"
-            )
-        with col2:
-            candidates = candidates_itm1(
-                df_itm, 
-                st.session_state["date3"], 
-                st.session_state["business_hours3"], 
-                st.session_state["area3"], 
-                st.session_state["method3"]
-            )
-            st.selectbox(
-                label=f":material/lunch_dining: {st.session_state['method3']}", 
-                options=candidates, 
-                index=0, 
-                accept_new_options=False,
-                key="item3"
-            )
+    # Data processing and visualization
     with st.container(border=True):
         if len(st.session_state["date3"]) == 2:
-            df_sales_itm = process_itm1(
-                df_itm, 
+            df_pm = filter_pm(
+                df_cus, 
                 st.session_state["date3"], 
-                st.session_state["business_hours3"], 
-                st.session_state["area3"], 
-                st.session_state["aggregation3"], 
-                st.session_state["method3"], 
-                st.session_state["item3"]
+                st.session_state["bsh3"], 
+                st.session_state["area3"]
             )
-            st.line_chart(data=df_sales_itm)
+            if df_pm["カウント"].sum() != 0:
+                fig = px.pie(
+                    df_pm, 
+                    names="支払い方法", 
+                    values="カウント"
+                )
+                st.plotly_chart(fig)
+            else:
+                st.image(sleeping)
+    # Data
     with st.expander("データを見る", expanded=False):
         if len(st.session_state["date3"]) == 2:
-            st.dataframe(df_sales_itm)
+            st.dataframe(df_pm, hide_index=True)
             st.download_button(
                 label=":material/download: `.csv`でダウンロード", 
-                data=convert_for_download(df_sales_itm, index=True), 
-                file_name=f"sales_items_{st.session_state['date3'][0]}-{st.session_state['date3'][1]}.csv", 
+                data=convert_for_download(df_pm, index=False), 
+                file_name=f"payments_{st.session_state['date3'][0]}-{st.session_state['date3'][1]}.csv", 
                 mime="text/csv"
             )
 
 # space
 st.write("")
 
-# sales by department
+st.subheader("売上の可視化", divider="gray")
+
+# 4. sales by item
 with st.container(border=True):
-    st.write("##### 各部門ごとの売上推移")
+    st.write("##### 各商品ごとの売上推移")
+    # Options
     with st.container(border=True):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -503,7 +504,7 @@ with st.container(border=True):
                 options=["昼（11:00～14:00）", "夜（17:30～19:30）", "昼・夜"], 
                 index=0, 
                 accept_new_options=False, 
-                key="business_hours4"
+                key="bsh4"
             )
         with col3:
             st.selectbox(
@@ -511,7 +512,8 @@ with st.container(border=True):
                 options=["西食堂", "東カフェテリア", "両方"], 
                 accept_new_options=False, 
                 index=0, 
-                key="area4"
+                key="area4", 
+                help="「両方」を選択すると、東西店舗の各グラフを重ね合わせて可視化します。"
             )
         with col4:
             st.selectbox(
@@ -519,42 +521,186 @@ with st.container(border=True):
                 options=["数量", "金額"], 
                 index=0, 
                 accept_new_options=False,
-                key="aggregation4"
+                key="aggr4"
+            )
+        with col1:
+            st.selectbox(
+                label=":material/filter_alt: 商品の指定方法", 
+                options=["名前", "バーコード", "SKU"], 
+                index=0, 
+                accept_new_options=False,
+                key="mthd4"
+            )
+        with col2:
+            candidates = candidates_itm1(
+                df_itm, 
+                st.session_state["date4"], 
+                st.session_state["bsh4"], 
+                st.session_state["area4"], 
+                st.session_state["mthd4"]
+            )
+            st.selectbox(
+                label=f":material/lunch_dining: {st.session_state['mthd4']}", 
+                options=candidates, 
+                index=0, 
+                accept_new_options=False,
+                key="item4"
+            )
+    # Data processing and visualization
+    with st.container(border=True):
+        if len(st.session_state["date4"]) == 2:
+            df_sales_itm = process_itm1(
+                df_itm, 
+                st.session_state["date4"], 
+                st.session_state["bsh4"], 
+                st.session_state["area4"], 
+                st.session_state["aggr4"], 
+                st.session_state["mthd4"], 
+                st.session_state["item4"]
+            )
+            if not df_sales_itm.empty:
+                if "df_calendar" in st.session_state:
+                    df_sales_itm_modified = pd.merge(
+                        df_sales_itm, 
+                        st.session_state["df_calendar"], 
+                        left_on = "開始日時", 
+                        right_on="date", 
+                        how="left"
+                    )
+                    fig = px.line(
+                        df_sales_itm_modified, 
+                        x="date", 
+                        y=df_sales_itm.columns, 
+                        hover_data=["academic_year", "term", "class", "info"], 
+                        markers=True
+                    )
+                    fig.update_traces(marker=dict(size=5))
+                    st.plotly_chart(fig)
+                else:
+                    fig = px.line(
+                        df_sales_itm, 
+                        x=df_sales_itm.index,
+                        y=df_sales_itm.columns,
+                        markers=True
+                    )
+                    fig.update_traces(marker=dict(size=5))
+                    st.plotly_chart(fig)
+            else:
+                st.image(sleeping)
+    # Data
+    with st.expander("データを見る", expanded=False):
+        if len(st.session_state["date4"]) == 2:
+            st.dataframe(df_sales_itm)
+            st.download_button(
+                label=":material/download: `.csv`でダウンロード", 
+                data=convert_for_download(df_sales_itm, index=True), 
+                file_name=f"sales_items_{st.session_state['date4'][0]}-{st.session_state['date4'][1]}.csv", 
+                mime="text/csv"
+            )
+
+# space
+st.write("")
+
+# 5. sales by department
+with st.container(border=True):
+    st.write("##### 各部門ごとの売上推移")
+    # Options
+    with st.container(border=True):
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.date_input(
+                label=":material/calendar_month: 日付", 
+                value=(min_date, max_date), 
+                min_value=min_date, 
+                max_value=max_date, 
+                key="date5"
+            )
+        with col2:
+            st.selectbox(
+                label=":material/schedule: 営業時間", 
+                options=["昼（11:00～14:00）", "夜（17:30～19:30）", "昼・夜"], 
+                index=0, 
+                accept_new_options=False, 
+                key="bsh5"
+            )
+        with col3:
+            st.selectbox(
+                label=":material/storefront: 店舗", 
+                options=["西食堂", "東カフェテリア", "両方"], 
+                accept_new_options=False, 
+                index=0, 
+                key="area5"
+            )
+        with col4:
+            st.selectbox(
+                label=":material/calculate: 集計方法", 
+                options=["数量", "金額"], 
+                index=0, 
+                accept_new_options=False,
+                key="aggr5"
             )
         with col1:
             candidates = candidates_itm2(
                 df_itm, 
-                st.session_state["date4"], 
-                st.session_state["business_hours4"], 
-                st.session_state["area4"]
+                st.session_state["date5"], 
+                st.session_state["bsh5"], 
+                st.session_state["area5"]
             )
             st.selectbox(
                 label=":material/category: 部門", 
                 options=candidates, 
                 index=0, 
                 accept_new_options=False,
-                key="department4"
+                key="dpmt5"
             )
+    # Data processing and visualization
     with st.container(border=True):
-        if len(st.session_state["date4"]) == 2:
+        if len(st.session_state["date5"]) == 2:
             df_sales_dep = process_itm2(
                 df_itm, 
-                st.session_state["date4"], 
-                st.session_state["business_hours4"], 
-                st.session_state["area4"], 
-                st.session_state["aggregation4"], 
-                st.session_state["department4"]
+                st.session_state["date5"], 
+                st.session_state["bsh5"], 
+                st.session_state["area5"], 
+                st.session_state["aggr5"], 
+                st.session_state["dpmt5"]
             )
-            st.line_chart(data=df_sales_dep)
+            if not df_sales_dep.empty:
+                if "df_calendar" in st.session_state:
+                    df_sales_dep_modified = pd.merge(
+                        df_sales_dep, 
+                        st.session_state["df_calendar"], 
+                        left_on = "開始日時", 
+                        right_on="date", 
+                        how="left"
+                    )
+                    fig = px.line(
+                        df_sales_dep_modified, 
+                        x="date", 
+                        y=df_sales_dep.columns, 
+                        hover_data=["academic_year", "term", "class", "info"], 
+                        markers=True
+                    )
+                    fig.update_traces(marker=dict(size=5))
+                    st.plotly_chart(fig)
+                else:
+                    fig = px.line(
+                        df_sales_dep, 
+                        x=df_sales_dep.index, 
+                        y=df_sales_dep.columns, 
+                        markers=True
+                    )
+                    fig.update_traces(marker=dict(size=5))
+                    st.plotly_chart(fig)
+            else:
+                st.image(sleeping)
+    # Data
     with st.expander("データを見る", expanded=False):
-        if len(st.session_state["date4"]) == 2:
+        if len(st.session_state["date5"]) == 2:
             st.dataframe(df_sales_dep)
             st.download_button(
                 label=":material/download: `.csv`でダウンロード", 
                 data=convert_for_download(df_sales_dep, index=True), 
-                file_name=f"sales_department_{st.session_state['date4'][0]}-{st.session_state['date4'][1]}.csv", 
+                file_name=f"sales_department_{st.session_state['date5'][0]}-{st.session_state['date5'][1]}.csv", 
                 mime="text/csv"
             )
-
-
 

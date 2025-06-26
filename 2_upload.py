@@ -10,7 +10,6 @@ import numpy as np
 #-----------------------------------------Settings-----------------------------------------
 
 favicon = Image.open("static/favicon.ico")
-
 st.set_page_config(
     page_title="アップロード", 
     layout="centered",
@@ -19,7 +18,7 @@ st.set_page_config(
     menu_items={
         'Get help': "https://www.example.com/help", # This will be replaced with GitHub Pages URL
         'Report a bug': "https://forms.gle/ARs9Md4jqjHxJwAW9", # Google Forms
-        'About': "#### [App_name]"
+        'About': "#### POScope \nv1.0.0"
     }
 )
 
@@ -265,6 +264,7 @@ def when_calendar_changed() -> None:
     st.session_state["calendar_changed"] = True
 
 
+@st.cache_data(show_spinner=False)
 def load_uploaded_calendar(file: UploadedFile) -> pd.DataFrame:
     """
     Description
@@ -273,6 +273,7 @@ def load_uploaded_calendar(file: UploadedFile) -> pd.DataFrame:
     return df_calendar
 
 
+@st.cache_data(show_spinner=False)
 def set_session_state_calendar(df_cal: pd.DataFrame) -> None:
     """
     Description
@@ -282,7 +283,7 @@ def set_session_state_calendar(df_cal: pd.DataFrame) -> None:
 
 #-----------------------------------------Contents-----------------------------------------
 
-# Initialize session state
+# Initialize session states
 if "zip_pos_changed" not in st.session_state:
     st.session_state["zip_pos_changed"] = False
 if "syllabus_changed" not in st.session_state:
@@ -524,8 +525,10 @@ with st.container(border=True):
                 else:
                     set_session_state_calendar(df_calendar)
                     st.success(
-                        """
+                        f"""
                         :material/check_circle: 以下のカレンダー形式データのアップロードが完了しました。
+                         - 期間：{st.session_state["df_calendar"]["date"].min().strftime("%Y/%m/%d")}～
+                         {st.session_state["df_calendar"]["date"].max().strftime("%Y/%m/%d")}
                         """
                     )
                     st.session_state["calendar_changed"] = False
@@ -538,14 +541,25 @@ with st.container(border=True):
         # If the user changed the files, this message disappears.
         if "df_calendar" in st.session_state and not st.session_state["calendar_changed"]:
             st.success(
-                """
+                f"""
                 :material/check_circle: 以下のカレンダー形式データのアップロードが完了しています。
+                 - 期間：{st.session_state["df_calendar"]["date"].min().strftime("%Y/%m/%d")}～
+                 {st.session_state["df_calendar"]["date"].max().strftime("%Y/%m/%d")}
                 """
             )
     with st.expander(":material/warning: （重要）ファイル形式について"):
         st.markdown(
             """
-            カレンダー形式で...\\
+            各日付に対して、年度・学期・授業情報などを記録した`.xlsx`ファイルをアップロードする必要があります。
+            
+            ファイルの形式は以下の通りです。
+             - `date`, `academic_year`, `term`, `class`, `info`の5つの列を持つ。
+             - `date`：日付（YYYY/MM/DD）
+             - `academic_year`：年度（YYYY）
+             - `term`：学期（SPR, SMR, AUT, WTR）+ その他の情報（VAC, INT）
+             - `class`：授業情報（NoClass, MON~FRI, IntCourse）
+             - `info`：その他情報（Replaced, Holiday, TOEFL, OnlineExam, IkkyoFes）
+
             具体的には、以下のような表です。
             """
         )
