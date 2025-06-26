@@ -10,7 +10,6 @@ import numpy as np
 #-----------------------------------------Settings-----------------------------------------
 
 favicon = Image.open("static/favicon.ico")
-
 st.set_page_config(
     page_title="アップロード", 
     layout="centered",
@@ -19,7 +18,7 @@ st.set_page_config(
     menu_items={
         'Get help': "https://www.example.com/help", # This will be replaced with GitHub Pages URL
         'Report a bug': "https://forms.gle/ARs9Md4jqjHxJwAW9", # Google Forms
-        'About': "#### [App_name]"
+        'About': "#### POScope \nv1.0.0"
     }
 )
 
@@ -219,7 +218,6 @@ def check_syllabus_range(df: pd.DataFrame) -> bool:
     """
     terms = ["SPR", "SMR", "AUT", "WTR"]
     cols = sorted([[int(col[:4]), terms.index(col[4:]), col] for col in df.columns])
-    print(cols)
     prev_year = cols[0][0]
     prev_term_idx = cols[0][1]
     for year, term_idx, _ in cols[1:]:
@@ -266,9 +264,26 @@ def when_calendar_changed() -> None:
     st.session_state["calendar_changed"] = True
 
 
+@st.cache_data(show_spinner=False)
+def load_uploaded_calendar(file: UploadedFile) -> pd.DataFrame:
+    """
+    Description
+    """
+    df_calendar = pd.read_excel(file)
+    return df_calendar
+
+
+@st.cache_data(show_spinner=False)
+def set_session_state_calendar(df_cal: pd.DataFrame) -> None:
+    """
+    Description
+    """
+    st.session_state["df_calendar"] = df_cal
+
+
 #-----------------------------------------Contents-----------------------------------------
 
-# Initialize session state
+# Initialize session states
 if "zip_pos_changed" not in st.session_state:
     st.session_state["zip_pos_changed"] = False
 if "syllabus_changed" not in st.session_state:
@@ -502,13 +517,49 @@ with st.container(border=True):
         on_change=when_calendar_changed
     )
     if st.button(label="使用するデータを決定する", key="button_calendar", disabled=button_controller("uploaded_calendar")):
-        pass
+        with st.spinner("データを読み込んでいます...", show_time=True):
+            try:
+                df_calendar = load_uploaded_calendar(st.session_state["uploaded_calendar"])
+                if df_calendar.empty:
+                    st.error("アップロードされたファイルには有効なデータが含まれていません。")
+                else:
+                    set_session_state_calendar(df_calendar)
+                    st.success(
+                        f"""
+                        :material/check_circle: 以下のカレンダー形式データのアップロードが完了しました。
+                         - 期間：{st.session_state["df_calendar"]["date"].min().strftime("%Y/%m/%d")}～
+                         {st.session_state["df_calendar"]["date"].max().strftime("%Y/%m/%d")}
+                        """
+                    )
+                    st.session_state["calendar_changed"] = False
+            except Exception as e:
+                st.error("データの読み込みに失敗しました。")
+                st.write(e)
     else:
-        pass
+        # This message is shown when the user come back from other pages to this page
+        # only if the user has not changed the uploaded files since the last successful upload.
+        # If the user changed the files, this message disappears.
+        if "df_calendar" in st.session_state and not st.session_state["calendar_changed"]:
+            st.success(
+                f"""
+                :material/check_circle: 以下のカレンダー形式データのアップロードが完了しています。
+                 - 期間：{st.session_state["df_calendar"]["date"].min().strftime("%Y/%m/%d")}～
+                 {st.session_state["df_calendar"]["date"].max().strftime("%Y/%m/%d")}
+                """
+            )
     with st.expander(":material/warning: （重要）ファイル形式について"):
         st.markdown(
             """
-            カレンダー形式で...\\
+            各日付に対して、年度・学期・授業情報などを記録した`.xlsx`ファイルをアップロードする必要があります。
+            
+            ファイルの形式は以下の通りです。
+             - `date`, `academic_year`, `term`, `class`, `info`の5つの列を持つ。
+             - `date`：日付（YYYY/MM/DD）
+             - `academic_year`：年度（YYYY）
+             - `term`：学期（SPR, SMR, AUT, WTR）+ その他の情報（VAC, INT）
+             - `class`：授業情報（NoClass, MON~FRI, IntCourse）
+             - `info`：その他情報（Replaced, Holiday, TOEFL, OnlineExam, IkkyoFes）
+
             具体的には、以下のような表です。
             """
         )
