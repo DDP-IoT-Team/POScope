@@ -1,7 +1,9 @@
 import streamlit as st
 from PIL import Image
-import pickle
 import statsmodels.api as sm
+import joblib
+import pandas as pd
+from pandas import DataFrame
 
 #-----------------------------------------Settings-----------------------------------------
 
@@ -25,12 +27,80 @@ st.set_page_config(
 #線形回帰がベースで、リッジ・ラッソ回帰もできたらいいな
 #resampleメソッドを使うとよい
 
+#説明変数:n_day, n_people_1to5
+#目的変数:supply
+
+#process pos data
+@st.cache_data(show_spinner=False)
+def get_supply(df_items: DataFrame):
+    df_daily_sum = df_items.groupby(["アカウント名", pd.Grouper(key="開始日時", freq="1D")])["数量"].sum().reset_index()
+    return df_daily_sum
+
+#process syllabus data
+@st.cache_data(show_spinner=False)
+def adding_up(df_syllabus: DataFrame, nums):
+    daynames = ["月", "火", "水", "木", "金"]
+    eng_daynames = ["MON", "TUE", "WED", "THU", "FRI"]
+    df_result = pd.DataFrame()
+    for dayname, eng_dayname in zip(daynames, eng_daynames):
+        df_syllabus_tmp = df_syllabus.loc[dayname].loc[nums].sum()
+        df_syllabus_tmp.name = eng_dayname
+        df_result = pd.concat([df_result, df_syllabus_tmp], axis=1)
+    return df_result.T
+
+@st.cache_data(show_spinner=False)
+def predict_supply(df_items, df_calendar, df_syllabus, analysis_method:str, store:str, time_span:int):
+    today = pd.Timestamp.today().normalize()
+    df_calendar = df_calendar.copy()
+    df_calendar["date"] = pd.to_datetime(df_calendar["date"])
+    future_dates = df_calendar[df_calendar["date"] >= today].sort_values("date").head(time_span)
+    n_day_df = future_dates[["n_day", "academic_year", "term", "date"]].reset_index(drop=True)
+
+    weekday_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI"}
+    n_day_df["weekday_eng"] = n_day_df["date"].dt.dayofweek.map(weekday_map)
+
+    # n_people_1to5をsyllabusから取得
+
+    #predicting supply
+    X_pred = n_day_df[["n_day", "n_people_1to5"]]
+
+    model = joblib.load(f"models/{analysis_method}/{store}.pkl")
+    predictions = model.predict(X_pred)
+
+    result = n_day_df[["date", "n_day", "n_people_1to5"]].copy()
+    result["prediction"] = predictions
+    return result
+
 #-----------------------------------------Contents-----------------------------------------
 
 st.logo(favicon, size="large")
 
-st.subheader("客数予測")
+st.subheader("提供数予測",divider="gray")
 
+with st.container(border=True):
+    col1, col2, col3= st.columns(3)
+with col1:
+    st.selectbox(
+        label=":material/storefront: 店舗",
+        options=["西食堂", "東カフェテリア"],
+        index=0,  # Default to "西食堂"
+        key="store"
+        )
+with col2:
+    st.selectbox(
+        label=":chart_with_upwards_trend: 分析方法",
+        options=["線形回帰"],
+        index=0,  # Default to "線形回帰"
+        key="analysis_method"
+        )
+with col3:
+    st.selectbox(
+        label=":calendar: 予測日数",
+        options=["7日", "30日", "学期末まで"],
+        index=0,  # Default to "7日"
+        key="forecast_days"
+    )
+st.subheader("データの確認",divider="gray")
 if "df_customers" in st.session_state:
     st.write("#### df_customers")
     st.session_state["df_customers"]
@@ -47,3 +117,8 @@ if "df_calendar" in st.session_state:
     st.write("#### df_calendar")
     st.session_state["df_calendar"]
 
+    
+st.write("#### 提供数の予測")
+result = get_supply(st.session_state["df_items"])
+result = pd.merge(result,st.session_state["df_calendar"][["n_day", "academic_year", "term", "date"]], left_on="開始日時",right_on="date", how="inner")
+st.write(result)
