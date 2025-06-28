@@ -20,6 +20,10 @@ pages = [
         "4_forecast.py", 
         title="予測", 
         icon=":material/query_stats:"
+    ), 
+    st.Page(
+        "5_test.py", 
+        title="Test"
     )
 ]
 
