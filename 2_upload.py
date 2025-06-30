@@ -25,6 +25,15 @@ st.set_page_config(
 
 #-----------------------------------------Functions-----------------------------------------
 
+# @st.cache_data(show_spinner=False)
+# Info bar "Running function()" in the spinner
+# https://discuss.streamlit.io/t/info-bar-running-function-appearing-unnecessarily-for-cached-function/6015
+
+# POS data of "東カフェテリア" are not necessarily continuous
+# because "東カフェテリア" is closed during vacation, 
+# so we cannot judge whether the user has not uploaded the whole date or
+# there is no record during the specific period in the first place.
+
 #-------------universal-------------
 
 def button_controller(file_uploader_key: str) -> bool:
@@ -53,9 +62,6 @@ def when_zip_pos_changed() -> None:
     st.session_state["zip_pos_changed"] = True
 
 
-# Info bar "Running function()" in the spinner
-# https://discuss.streamlit.io/t/info-bar-running-function-appearing-unnecessarily-for-cached-function/6015
-@st.cache_data(show_spinner=False)
 def load_uploaded_zip_pos(zip_files: list[UploadedFile]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load the uploaded zip files and return DataFrames of checkouts, items, and payments.\\
@@ -94,11 +100,10 @@ def load_uploaded_zip_pos(zip_files: list[UploadedFile]) -> tuple[pd.DataFrame, 
                         if tmp.empty or tmp.isna().all().all():
                             continue
                         df_payments = pd.concat([df_payments, tmp], axis="index")
-    
+
     return df_checkouts, df_items, df_payments
 
 
-@st.cache_data(show_spinner=False)
 def cleanup_pos(df_checkouts: pd.DataFrame, df_items: pd.DataFrame, df_payments: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Return cleanuped POS data.
@@ -109,6 +114,11 @@ def cleanup_pos(df_checkouts: pd.DataFrame, df_items: pd.DataFrame, df_payments:
     df_items = df_items[["会計ID", "SKU", "バーコード", 
                          "名前", "数量", "金額", "部門"]]
     df_payments = df_payments[["会計ID", "支払い方法"]]
+
+    # Drop duplicates
+    df_checkouts = df_checkouts.drop_duplicates()
+    df_items = df_items.drop_duplicates()
+    df_payments = df_payments.drop_duplicates()
 
     # Delete cancelled records
     # Non-NA value in "削除日時" means that the record is cancelled
@@ -152,15 +162,6 @@ def cleanup_pos(df_checkouts: pd.DataFrame, df_items: pd.DataFrame, df_payments:
     return df_customers, df_items
 
 
-# POS data of "東カフェテリア" are not necessarily continuous
-# because "東カフェテリア" is closed during vacation, 
-# so we cannot judge whether the user has not uploaded the whole date or
-# there is no record during the specific period in the first place.
-# def check_pos_range(df_cus: pd.DataFrame):
-#     return None
-
-
-@st.cache_data(show_spinner=False)
 def set_session_state_pos(df_cus: pd.DataFrame, df_itm: pd.DataFrame) -> None:
     """
     Set the session states related with POS data.
@@ -173,18 +174,42 @@ def set_session_state_pos(df_cus: pd.DataFrame, df_itm: pd.DataFrame) -> None:
     st.session_state["west_date_max"] = df_cus.query('アカウント名 == "西食堂"')["会計日時"].max()
     st.session_state["east_date_max"] = df_cus.query('アカウント名 == "東カフェテリア"')["会計日時"].max()
 
-    if "西食堂" in df_cus["アカウント名"].unique().tolist():
-        st.session_state["west_pos"] = True
+    #if "西食堂" in df_cus["アカウント名"].unique().tolist():
+    #    st.session_state["west_pos"] = True
+    #else:
+    #    st.session_state["west_pos"] = False
+    #if "東カフェテリア" in df_cus["アカウント名"].unique().tolist():
+    #    st.session_state["east_pos"] = True
+    #else:
+    #    st.session_state["east_pos"] = False
+    
+    stores = df_cus["アカウント名"].unique().tolist()
+    if "西食堂" in stores:
+        if "東カフェテリア" in stores:
+            st.session_state["west_pos"] = True
+            st.session_state["east_pos"] = True
+            st.session_state["min_date"] = min(
+                st.session_state["west_date_min"], 
+                st.session_state["east_date_min"]
+            )
+            st.session_state["max_date"] = max(
+                st.session_state["west_date_max"], 
+                st.session_state["east_date_max"]
+            )
+        else:
+            st.session_state["west_pos"] = True
+            st.session_state["east_pos"] = False
+            st.session_state["min_date"] = st.session_state["west_date_min"]
+            st.session_state["max_date"] = st.session_state["west_date_max"]
     else:
-        st.session_state["west_pos"] = False
-    if "東カフェテリア" in df_cus["アカウント名"].unique().tolist():
-        st.session_state["east_pos"] = True
-    else:
-        st.session_state["east_pos"] = False
+        if "東カフェテリア" in stores:
+            st.session_state["west_pos"] = False
+            st.session_state["east_pos"] = True
+            st.session_state["min_date"] = st.session_state["east_date_min"]
+            st.session_state["max_date"] = st.session_state["east_date_max"]
 
 
 # future implementation
-@st.cache_data
 def exclude_outlier():
     return None
 
@@ -201,7 +226,6 @@ def when_syllabus_changed() -> None:
     st.session_state["syllabus_changed"] = True
 
 
-@st.cache_data(show_spinner=False)
 def load_uploaded_syllabus(file: UploadedFile) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load the uploaded xlsx file of syllabus data and return DataFrames.
@@ -211,7 +235,6 @@ def load_uploaded_syllabus(file: UploadedFile) -> tuple[pd.DataFrame, pd.DataFra
     return df_syllabus_west, df_syllabus_east
 
 
-@st.cache_data(show_spinner=False)
 def check_syllabus_range(df: pd.DataFrame) -> bool:
     """
     Return `True` if the range of the syllabus data is continuous and valid, otherwise `False`.
@@ -237,7 +260,6 @@ def check_syllabus_range(df: pd.DataFrame) -> bool:
     return True
 
 
-@st.cache_data(show_spinner=False)
 def set_session_state_syllabus(df_slb_west: pd.DataFrame, df_slb_east: pd.DataFrame) -> None:
     """
     Set the session states related with syllabus data.
@@ -264,7 +286,6 @@ def when_calendar_changed() -> None:
     st.session_state["calendar_changed"] = True
 
 
-@st.cache_data(show_spinner=False)
 def load_uploaded_calendar(file: UploadedFile) -> pd.DataFrame:
     """
     Description
@@ -273,7 +294,6 @@ def load_uploaded_calendar(file: UploadedFile) -> pd.DataFrame:
     return df_calendar
 
 
-@st.cache_data(show_spinner=False)
 def set_session_state_calendar(df_cal: pd.DataFrame) -> None:
     """
     Description
@@ -370,7 +390,7 @@ with st.container(border=True):
                  - 西食堂：{messages[0]}
                  - 東カフェテリア：{messages[1]}
                 """
-            )
+            )    
 
 # space
 st.write("")
@@ -578,5 +598,3 @@ with st.container(border=True):
             use_container_width=True
         )
 
-
-# サンプルデータ

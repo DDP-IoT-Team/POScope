@@ -221,23 +221,25 @@ if "df_customers" not in st.session_state:
     st.error("データがアップロードされていません。最初のページでデータをアップロードしてください。")
     st.stop()
 
-# Load the data from session state
-df_cus: pd.DataFrame = st.session_state["df_customers"]
-df_itm: pd.DataFrame = st.session_state["df_items"]
+# Load data
+df_cus = st.session_state["df_customers"]
+df_itm = st.session_state["df_items"]
+min_date = st.session_state["min_date"]
+max_date = st.session_state["max_date"]
 
 # Set session state variables
-if st.session_state["west_pos"]:
-    if st.session_state["east_pos"]:
-        min_date = min(st.session_state["west_date_min"], 
-                       st.session_state["east_date_min"])
-        max_date = max(st.session_state["west_date_max"], 
-                       st.session_state["east_date_max"])
-    else:
-        min_date = st.session_state["west_date_min"]
-        max_date = st.session_state["west_date_max"]
-else:
-    min_date = st.session_state["east_date_min"]
-    max_date = st.session_state["east_date_max"]
+#if st.session_state["west_pos"]:
+#    if st.session_state["east_pos"]:
+#        min_date = min(st.session_state["west_date_min"], 
+#                       st.session_state["east_date_min"])
+#        max_date = max(st.session_state["west_date_max"], 
+#                       st.session_state["east_date_max"])
+#    else:
+#        min_date = st.session_state["west_date_min"]
+#        max_date = st.session_state["west_date_max"]
+#else:
+#    min_date = st.session_state["east_date_min"]
+#    max_date = st.session_state["east_date_max"]
 
 # visualization
 st.subheader("客数の可視化", divider="gray")
@@ -375,6 +377,7 @@ with st.container(border=True):
                 st.session_state["bsh2"], 
                 st.session_state["area2"]
             )
+            df_cus_day
             if not df_cus_day.empty:
                 if "df_calendar" in st.session_state:
                     df_cus_day_modified = pd.merge(
@@ -384,25 +387,48 @@ with st.container(border=True):
                         right_on="date", 
                         how="left"
                     )
-                    fig = px.line(
-                        df_cus_day_modified, 
-                        x="date", 
-                        y=df_cus_day.columns, 
-                        hover_data=["academic_year", "term", "class", "info"], 
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
+                    fig = go.Figure()
+                    for store in df_cus_day.columns:
+                        fig.add_trace(go.Scatter(
+                            x=df_cus_day_modified["date"], 
+                            y=df_cus_day_modified[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>客数: %{y}人<br>学期: %{meta[0]}年度%{meta[1]}<br>講義情報: %{meta[2]}<br>その他情報: %{meta[3]}<extra></extra>", 
+                            meta=df_cus_day_modified[["academic_year", "term", "class", "info"]].values.tolist()
+                        ))
                     st.plotly_chart(fig)
+                    #fig = px.line(
+                    #    df_cus_day_modified, 
+                    #    x="date", 
+                    #    y=df_cus_day.columns, 
+                    #    hover_data=["academic_year", "term", "class", "info"], 
+                    #    labels={"date": "日付", "value": "客数", "variable": "店舗", "academic_year": "年度", "term": "学期", "class": "講義情報", "info": "その他"}, 
+                    #    markers=True
+                    #)
+                    #fig.update_traces(marker=dict(size=5))
+                    #st.plotly_chart(fig)
                 else:
-                    pass
-                    fig = px.line(
-                        df_cus_day, 
-                        x=df_cus_day.index, 
-                        y=df_cus_day.columns, 
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
-                    st.plotly_chart(fig)
+                    fig = go.Figure()
+                    for store in df_cus_day.columns:
+                        fig.add_trace(go.Scatter(
+                            x=df_cus_day["date"], 
+                            y=df_cus_day[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>客数: %{y}人<extra></extra>"
+                        ))
+                    #st.plotly_chart(fig)
+                    #fig = px.line(
+                    #    df_cus_day, 
+                    #    x=df_cus_day.index, 
+                    #    y=df_cus_day.columns, 
+                    #    markers=True
+                    #)
+                    #fig.update_traces(marker=dict(size=5))
+                    #st.plotly_chart(fig)
             else:
                 st.image(sleeping)
     # Data
