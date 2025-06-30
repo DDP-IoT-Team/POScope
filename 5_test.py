@@ -47,6 +47,21 @@ def check_uploaded_files() -> list[str]:
     return not_uploaded
 
 
+def resample_cus_pos(df_cus: DataFrame):
+    df_cus_resampled = df_cus.groupby(["アカウント名", pd.Grouper(key="開始日時", freq="1D")])["客数"].sum()
+    return df_cus_resampled
+
+
+def get_supply(df_items: DataFrame):
+    df_daily_sum = df_items.groupby(["アカウント名", pd.Grouper(key="開始日時", freq="1D")])["数量"].sum().reset_index()
+    return df_daily_sum
+
+
+def check_available_data():
+    return None
+
+
+
 @st.cache_data(show_spinner=False)
 def get_training_data(df_cus: pd.DataFrame, store: str, bsh: str):
     df_cus_target = df_cus[df_cus["アカウント名"] == store]
@@ -150,54 +165,3 @@ with st.container(border=True):
         st.session_state["area"], 
         st.session_state["bsh"]
     )
-    tmp
-
-
-#st.session_state
-
-
-with st.container(border=True):
-    col1, col2, col3= st.columns(3)
-with col1:
-    st.selectbox(
-        label=":material/storefront: 店舗",
-        options=["西食堂", "東カフェテリア"],
-        index=0,  # Default to "西食堂"
-        key="store"
-        )
-with col2:
-    st.selectbox(
-        label=":chart_with_upwards_trend: 分析方法",
-        options=["線形回帰"],
-        index=0,  # Default to "線形回帰"
-        key="analysis_method"
-        )
-with col3:
-    st.selectbox(
-        label=":calendar: 予測日数",
-        options=["7日", "30日", "学期末まで"],
-        index=0,  # Default to "7日"
-        key="forecast_days"
-    )
-st.subheader("データの確認",divider="gray")
-if "df_customers" in st.session_state:
-    st.write("#### df_customers")
-    st.session_state["df_customers"]
-if "df_items" in st.session_state:
-    st.write("#### df_items")
-    st.session_state["df_items"]
-if "df_syllabus_west" in st.session_state:
-    st.write("#### df_syllabus_west")
-    st.session_state["df_syllabus_west"]
-if "df_syllabus_east" in st.session_state:
-    st.write("#### df_syllabus_east")
-    st.session_state["df_syllabus_east"]
-if "df_calendar" in st.session_state:
-    st.write("#### df_calendar")
-    st.session_state["df_calendar"]
-
-    
-#st.write("#### 提供数の予測")
-#result = get_supply(st.session_state["df_items"])
-#result = pd.merge(result,st.session_state["df_calendar"][["n_day", "academic_year", "term", "date"]], left_on="開始日時",right_on="date", how="inner")
-#st.write(result)
