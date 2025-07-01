@@ -530,7 +530,7 @@ st.write("")
 with st.container(border=True):
     st.subheader(":material/calendar_month: カレンダー形式データ")
     st.file_uploader(
-        label="カレンダー形式のデータ", 
+        label="カレンダー形式のデータを含む`.xlsx`ファイルをアップロードしてください。", 
         type=["xlsx"], 
         accept_multiple_files=False, 
         key="uploaded_calendar", 
@@ -553,7 +553,12 @@ with st.container(border=True):
                     )
                     st.session_state["calendar_changed"] = False
             except Exception as e:
-                st.error("データの読み込みに失敗しました。")
+                st.error(
+                    """
+                    データの読み込みに失敗しました。\\
+                    データ形式が正しくない可能性があります。
+                    """
+                )
                 st.write(e)
     else:
         # This message is shown when the user come back from other pages to this page
@@ -579,7 +584,12 @@ with st.container(border=True):
              - `term`：学期（SPR, SMR, AUT, WTR）+ その他の情報（VAC, INT）
              - `class`：授業情報（NoClass, MON~FRI, IntCourse）
              - `info`：その他情報（Replaced, Holiday, TOEFL, OnlineExam, IkkyoFes）
-
+            
+            なお、日付は学期途中から始めないようにしてください。\\
+            例えば、2022年度の春学期は2022/04/11から始まりますが、その際に、2022/04/18など学期途中から
+            カレンダーの日程を始めると、客数予測モデルを構築する際に正しく処理されませんので注意してください。
+            
+            最も確実な方法は、04/01から始めることです。\\
             具体的には、以下のような表です。
             """
         )
