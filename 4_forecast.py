@@ -79,27 +79,32 @@ st.subheader("提供数予測",divider="gray")
 
 with st.container(border=True):
     col1, col2, col3= st.columns(3)
-with col1:
-    st.selectbox(
-        label=":material/storefront: 店舗",
-        options=["西食堂", "東カフェテリア"],
-        index=0,  # Default to "西食堂"
-        key="store"
+    with col1:
+        st.selectbox(
+            label=":material/storefront: 店舗",
+            options=["西食堂", "東カフェテリア"],
+            index=0,  # Default to "西食堂"
+            key="store"
+            )
+    with col2:
+        st.selectbox(
+            label=":chart_with_upwards_trend: 分析方法",
+            options=["線形回帰"],
+            index=0,  # Default to "線形回帰"
+            key="analysis_method"
+            )
+    with col3:
+        st.selectbox(
+            label=":calendar: 予測日数",
+            options=["7日", "30日", "学期末まで"],
+            index=0,  # Default to "7日"
+            key="forecast_days"
         )
-with col2:
-    st.selectbox(
-        label=":chart_with_upwards_trend: 分析方法",
-        options=["線形回帰"],
-        index=0,  # Default to "線形回帰"
-        key="analysis_method"
-        )
-with col3:
-    st.selectbox(
-        label=":calendar: 予測日数",
-        options=["7日", "30日", "学期末まで"],
-        index=0,  # Default to "7日"
-        key="forecast_days"
-    )
+        
+    st.button(label="予測", key="forecast_button")
+    if st.session_state.forecast_button:
+        pass
+
 st.subheader("データの確認",divider="gray")
 if "df_customers" in st.session_state:
     st.write("#### df_customers")
@@ -119,6 +124,7 @@ if "df_calendar" in st.session_state:
 
     
 st.write("#### 提供数の予測")
-result = get_supply(st.session_state["df_items"])
-result = pd.merge(result,st.session_state["df_calendar"][["n_day", "academic_year", "term", "date"]], left_on="開始日時",right_on="date", how="inner")
-st.write(result)
+if "df_items" in st.session_state:
+    result = get_supply(st.session_state["df_items"])
+    result = pd.merge(result,st.session_state["df_calendar"][["n_day", "academic_year", "term", "date"]], left_on="開始日時",right_on="date", how="inner")
+    st.write(result)
