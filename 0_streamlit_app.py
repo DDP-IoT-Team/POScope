@@ -16,14 +16,15 @@ pages = [
         title="データ可視化", 
         icon=":material/visibility:"
     ), 
-    st.Page(
-        "4_forecast.py", 
-        title="予測", 
-        icon=":material/query_stats:"
-    ), 
+    #st.Page(
+    #    "4_forecast.py", 
+    #    title="予測", 
+    #    icon=":material/query_stats:"
+    #), 
     st.Page(
         "5_test.py", 
-        title="Test"
+        title="予測", 
+        icon=":material/query_stats:"
     )
 ]
 
