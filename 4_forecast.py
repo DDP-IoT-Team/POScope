@@ -77,8 +77,15 @@ st.logo(favicon, size="large")
 
 st.subheader("提供数予測",divider="gray")
 
+st.file_uploader(
+        label="学習済みモデルをアップロードしてください。",
+        type=["pkl", "pickle"], 
+        key="trained_model", 
+        accept_multiple_files=False
+        )
+
 with st.container(border=True):
-    col1, col2, col3= st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         st.selectbox(
             label=":material/storefront: 店舗",
@@ -87,13 +94,6 @@ with st.container(border=True):
             key="store"
             )
     with col2:
-        st.selectbox(
-            label=":chart_with_upwards_trend: 分析方法",
-            options=["線形回帰"],
-            index=0,  # Default to "線形回帰"
-            key="analysis_method"
-            )
-    with col3:
         st.selectbox(
             label=":calendar: 予測日数",
             options=["7日", "30日", "学期末まで"],
@@ -104,7 +104,6 @@ with st.container(border=True):
     st.button(label="予測", key="forecast_button")
     if st.session_state.forecast_button:
         pass
-
 st.subheader("データの確認",divider="gray")
 if "df_customers" in st.session_state:
     st.write("#### df_customers")
