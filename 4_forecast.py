@@ -19,7 +19,7 @@ st.set_page_config(
     page_icon=favicon, 
     menu_items={
         'Get help': "https://www.example.com/help", # This will be replaced with GitHub Pages URL
-        'Report a bug': "https://forms.gle/ARs9Md4jqjHxJwAW9", # Google Forms
+        'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
 )

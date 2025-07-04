@@ -1,1 +1,5 @@
+# python virtual environment
 app_env/
+
+# secrets
+.streamlit/secrets.toml
