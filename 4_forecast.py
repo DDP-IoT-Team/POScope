@@ -504,31 +504,4 @@ with st.container(border=True):
                         "客数": y_pred
                     })
                     st.dataframe(df_pred)
-        
-            
-
-# space
-st.write("")
-
-with st.container(border=True):
-    st.write("##### :material/line_axis: 既存のモデルから予測する")
-    if "履修者数データ" in not_uploaded_files or "カレンダー形式データ" in not_uploaded_files:
-        st.error(
-            f"""
-            :material/error: 以下のファイルがアップロードされていません。
-            {" - 履修者数データ" if "履修者数データ" in not_uploaded_files else ""}
-            {" - カレンダー形式データ" if "カレンダー形式データ" in not_uploaded_files else ""}
-            """
-        )
-    else:
-        st.file_uploader(
-            label="学習済みモデルをアップロードしてください。",
-            type=["pkl", "pickle"], 
-            key="uploaded_model", 
-            accept_multiple_files=False
-        )
-        if st.session_state["uploaded_model"]:
-            st.session_state["uploaded_model"]
-            st.write("pickleに学習データの期間、店舗、時間帯なども含まれているので、それを表示")
-
 
