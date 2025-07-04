@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from pandas import DataFrame
 import datetime
 from PIL import Image
 import plotly.express as px
@@ -218,26 +219,14 @@ st.title("データの可視化")
 
 # Check if the data has been uploaded
 if "df_customers" not in st.session_state:
-    st.error("データがアップロードされていません。最初のページでデータをアップロードしてください。")
+    st.error(":material/error: POSデータがアップロードされていません。")
     st.stop()
 
-# Load the data from session state
-df_cus: pd.DataFrame = st.session_state["df_customers"]
-df_itm: pd.DataFrame = st.session_state["df_items"]
-
-# Set session state variables
-if st.session_state["west_pos"]:
-    if st.session_state["east_pos"]:
-        min_date = min(st.session_state["west_date_min"], 
-                       st.session_state["east_date_min"])
-        max_date = max(st.session_state["west_date_max"], 
-                       st.session_state["east_date_max"])
-    else:
-        min_date = st.session_state["west_date_min"]
-        max_date = st.session_state["west_date_max"]
-else:
-    min_date = st.session_state["east_date_min"]
-    max_date = st.session_state["east_date_max"]
+# Load data
+df_cus = st.session_state["df_customers"]
+df_itm = st.session_state["df_items"]
+min_date = st.session_state["min_date"]
+max_date = st.session_state["max_date"]
 
 # visualization
 st.subheader("客数の可視化", divider="gray")
@@ -290,10 +279,19 @@ with st.container(border=True):
                 st.session_state["bsh1"], 
                 st.session_state["area1"]
             )
+            #df_cus_time
             if not df_cus_time.empty:
+                #if "df_calendar" in st.session_state:
+                #    df_cal: DataFrame = st.session_state["df_calendar"]
+                #    df_cal_target = df_cal[df_cal["date"].between(pd.Timestamp(st.session_state["date1"][0]), pd.Timestamp(st.session_state["date1"][1]))]
+                #    exclude_dates = df_cal_target[~df_cal_target["class"].isin(["MON", "TUE", "WED", "THU", "FRI"])]["date"].dt.date.tolist()
+                #else:
+                #    exclude_dates = []
+                df_cus_time_sum = df_cus_time.sum(axis="index")
+                exclude_dates = df_cus_time_sum[df_cus_time_sum == 0].index.tolist()
                 fig = go.Figure()
                 for col in df_cus_time.columns:
-                    if col.weekday() in [5, 6]:  # Saturday and Sunday
+                    if col.weekday() in [5, 6] or col in exclude_dates:  # Saturday and Sunday
                         continue
                     fig.add_trace(go.Scatter(
                         x=df_cus_time.index, 
@@ -308,7 +306,7 @@ with st.container(border=True):
                 # Plot average if there are multiple columns
                 if len(df_cus_time.columns) >= 2:
                     # Calculate the average for only weekdays (excluding weekends)
-                    ave = df_cus_time[[col for col in df_cus_time.columns if col.weekday() not in [5, 6]]].mean(axis="columns")
+                    ave = df_cus_time[[col for col in df_cus_time.columns if col.weekday() not in [5, 6] and col not in exclude_dates]].mean(axis="columns")
                     fig.add_trace(go.Scatter(
                         x=df_cus_time.index, 
                         y=ave, 
@@ -376,32 +374,39 @@ with st.container(border=True):
                 st.session_state["area2"]
             )
             if not df_cus_day.empty:
+                stores = df_cus_day.columns
+                # Add more information from the calendar data if available
                 if "df_calendar" in st.session_state:
-                    df_cus_day_modified = pd.merge(
+                    df_cus_day = pd.merge(
                         df_cus_day, 
                         st.session_state["df_calendar"], 
                         left_on="開始日時", 
                         right_on="date", 
                         how="left"
                     )
-                    fig = px.line(
-                        df_cus_day_modified, 
-                        x="date", 
-                        y=df_cus_day.columns, 
-                        hover_data=["academic_year", "term", "class", "info"], 
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
+                    fig = go.Figure()
+                    for store in stores:
+                        fig.add_trace(go.Scatter(
+                            x=df_cus_day["date"], 
+                            y=df_cus_day[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>客数: %{y}人<br>学期: %{meta[0]}年度%{meta[1]}<br>講義情報: %{meta[2]}<br>その他情報: %{meta[3]}<extra></extra>", 
+                            meta=df_cus_day[["academic_year", "term", "class", "info"]].values.tolist()
+                        ))
                     st.plotly_chart(fig)
                 else:
-                    pass
-                    fig = px.line(
-                        df_cus_day, 
-                        x=df_cus_day.index, 
-                        y=df_cus_day.columns, 
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
+                    fig = go.Figure()
+                    for store in stores:
+                        fig.add_trace(go.Scatter(
+                            x=df_cus_day.index, 
+                            y=df_cus_day[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>客数: %{y}人<extra></extra>"
+                        ))
                     st.plotly_chart(fig)
             else:
                 st.image(sleeping)
@@ -460,11 +465,12 @@ with st.container(border=True):
                 st.session_state["area3"]
             )
             if df_pm["カウント"].sum() != 0:
-                fig = px.pie(
-                    df_pm, 
-                    names="支払い方法", 
-                    values="カウント"
-                )
+                fig = go.Figure()
+                fig.add_trace(go.Pie(
+                    values=df_pm["カウント"], 
+                    labels=df_pm["支払い方法"], 
+                    hovertemplate="支払い方法: %{label}<br>カウント: %{value}人<extra></extra>"
+                ))
                 st.plotly_chart(fig)
             else:
                 st.image(sleeping)
@@ -559,31 +565,43 @@ with st.container(border=True):
                 st.session_state["item4"]
             )
             if not df_sales_itm.empty:
+                stores = df_sales_itm.columns
+                # Add more information from the calendar data if available
                 if "df_calendar" in st.session_state:
-                    df_sales_itm_modified = pd.merge(
+                    df_sales_itm = pd.merge(
                         df_sales_itm, 
                         st.session_state["df_calendar"], 
                         left_on = "開始日時", 
                         right_on="date", 
                         how="left"
                     )
-                    fig = px.line(
-                        df_sales_itm_modified, 
-                        x="date", 
-                        y=df_sales_itm.columns, 
-                        hover_data=["academic_year", "term", "class", "info"], 
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
+                    fig = go.Figure()
+                    for store in stores:
+                        fig.add_trace(go.Scatter(
+                            x=df_sales_itm["date"], 
+                            y=df_sales_itm[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>売上: "
+                                 + ("%{y}個" if st.session_state["aggr4"] == "数量" else "%{y:,}円")
+                                 + "<br>学期: %{meta[0]}年度%{meta[1]}<br>講義情報: %{meta[2]}<br>その他情報: %{meta[3]}<extra></extra>", 
+                            meta=df_sales_itm[["academic_year", "term", "class", "info"]].values.tolist()
+                        ))
                     st.plotly_chart(fig)
                 else:
-                    fig = px.line(
-                        df_sales_itm, 
-                        x=df_sales_itm.index,
-                        y=df_sales_itm.columns,
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
+                    fig = go.Figure()
+                    for store in stores:
+                        fig.add_trace(go.Scatter(
+                            x=df_sales_itm.index, 
+                            y=df_sales_itm[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>売上: "
+                                 + ("%{y}個" if st.session_state["aggr4"] == "数量" else "%{y:,}円")
+                                 + "<extra></extra>"
+                        ))
                     st.plotly_chart(fig)
             else:
                 st.image(sleeping)
@@ -665,31 +683,43 @@ with st.container(border=True):
                 st.session_state["dpmt5"]
             )
             if not df_sales_dep.empty:
+                stores = df_sales_dep.columns
+                # Add more information from the calendar data if available
                 if "df_calendar" in st.session_state:
-                    df_sales_dep_modified = pd.merge(
+                    df_sales_dep = pd.merge(
                         df_sales_dep, 
                         st.session_state["df_calendar"], 
                         left_on = "開始日時", 
                         right_on="date", 
                         how="left"
                     )
-                    fig = px.line(
-                        df_sales_dep_modified, 
-                        x="date", 
-                        y=df_sales_dep.columns, 
-                        hover_data=["academic_year", "term", "class", "info"], 
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
+                    fig = go.Figure()
+                    for store in stores:
+                        fig.add_trace(go.Scatter(
+                            x=df_sales_dep["date"], 
+                            y=df_sales_dep[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>売上: "
+                                 + ("%{y}個" if st.session_state["aggr5"] == "数量" else "%{y:,}円")
+                                 + "<br>学期: %{meta[0]}年度%{meta[1]}<br>講義情報: %{meta[2]}<br>その他情報: %{meta[3]}<extra></extra>", 
+                            meta=df_sales_dep[["academic_year", "term", "class", "info"]].values.tolist()
+                        ))
                     st.plotly_chart(fig)
                 else:
-                    fig = px.line(
-                        df_sales_dep, 
-                        x=df_sales_dep.index, 
-                        y=df_sales_dep.columns, 
-                        markers=True
-                    )
-                    fig.update_traces(marker=dict(size=5))
+                    fig = go.Figure()
+                    for store in stores:
+                        fig.add_trace(go.Scatter(
+                            x=df_sales_dep.index, 
+                            y=df_sales_dep[store], 
+                            mode="lines+markers", 
+                            marker=dict(size=5), 
+                            name=store, 
+                            hovertemplate="日付: %{x}<br>売上: "
+                                 + ("%{y}個" if st.session_state["aggr5"] == "数量" else "%{y:,}円")
+                                 + "<extra></extra>"
+                        ))
                     st.plotly_chart(fig)
             else:
                 st.image(sleeping)
