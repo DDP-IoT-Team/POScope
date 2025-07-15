@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[App_name] Documentation</title>
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            color: #3d3a2a;
+            background-color: #f9f9f9;
+        }
+        header {
+            background: #e8e7dd;
+            color: #3d3a2a;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        nav {
+            background: #3d3a2a;
+            color: #fff;
+            padding: 0.5rem;
+            text-align: center;
+        }
+        nav a {
+            color: #fff;
+            margin: 0 1rem;
+            text-decoration: none;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 1rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .section {
+            margin-bottom: 2rem;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #3d3a2a;
+        }
+        footer {
+            background: #3d3a2a;
+            color: #fff;
+            text-align: center;
+            padding: 1rem 0;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>[App_name] Documentation</h1>
+    </header>
+    <nav>
+        <a href="#overview">概要</a>
+        <a href="#features">特徴</a>
+        <a href="#installation">インストール</a>
+        <a href="#usage">使用方法</a>
+    </nav>
+    <div class="container">
+        <section id="overview" class="section">
+            <h2>概要</h2>
+            <p>このドキュメントでは、Streamlitアプリの目的、機能、ユーザーの操作フローについて説明します。</p>
+        </section>
+        <section id="features" class="section">
+            <h2>特徴</h2>
+            <ul>
+                <li>インタラクティブなデータ可視化</li>
+                <li>ユーザーフレンドリーなインターフェース</li>
+                <li>スムーズなデータのアップロードと処理</li>
+                <li>カスタマイズ可能なダッシュボード</li>
+            </ul>
+        </section>
+        <section id="installation" class="section">
+            <h2>インストール</h2>
+            <p>Streamlitアプリをインストールして実行するには、以下の手順に従ってください：</p>
+            <ol>
+                <li>GitHubからリポジトリをクローンします。</li>
+                <li><code>pip install -r requirements.txt</code>を使用して必要な依存関係をインストールします。</li>
+                <li><code>streamlit run app.py</code>でアプリケーションを実行します。</li>
+            </ol>
+        </section>
+        <section id="usage" class="section">
+            <h2>使用方法</h2>
+            <p>アプリを起動後、サイドバーを使って各機能にアクセスしてください。提供されているツールを使用してデータを操作し、洞察を生成します。</p>
+        </section>
+    </div>
+    <footer>
+        <p>Copyright &copy; 2025 [App_name] Documentation. All rights reserved.</p>
+    </footer>
+</body>
+</html>
