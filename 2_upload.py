@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", 
     page_icon=favicon, 
     menu_items={
-        'Get help': "https://www.example.com/help", # This will be replaced with GitHub Pages URL
+        'Get help': "https://ddp-iot-team.github.io/POScope/", # Documentation
         'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
@@ -311,14 +311,16 @@ if "syllabus_changed" not in st.session_state:
 if "calendar_changed" not in st.session_state:
     st.session_state["calendar_changed"] = False
 
+# logo in the sidebar
 st.logo(favicon, size="large")
+
 st.title("データアップロード")
 
 # upload POS data
 with st.container(border=True):
     st.subheader(":material/point_of_sale: POSデータ")
     st.file_uploader(
-        label="ユビレジアプリからエクスポートした`.zip`ファイル（`.csv`形式）をアップロードしてください。", 
+        label="ユビレジからエクスポートした`.zip`ファイル（`.csv`形式）をアップロードしてください。", 
         type=["zip"], 
         accept_multiple_files=True, 
         key="uploaded_zip_pos", 

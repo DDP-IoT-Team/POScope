@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", 
     page_icon=favicon, 
     menu_items={
-        'Get help': "https://www.example.com/help", # This will be replaced with GitHub Pages URL
+        'Get help': "https://ddp-iot-team.github.io/POScope/", # Documentation
         'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
