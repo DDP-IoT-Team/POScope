@@ -9,14 +9,17 @@ import numpy as np
 
 #-----------------------------------------Settings-----------------------------------------
 
+# Load an image
 favicon = Image.open("static/favicon.ico")
+
+# Page configuration
 st.set_page_config(
     page_title="アップロード", 
     layout="centered",
     initial_sidebar_state="expanded", 
     page_icon=favicon, 
     menu_items={
-        'Get help': "https://www.example.com/help", # This will be replaced with GitHub Pages URL
+        'Get help': "https://ddp-iot-team.github.io/POScope/", # Documentation
         'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
@@ -29,10 +32,6 @@ st.set_page_config(
 # Info bar "Running function()" in the spinner
 # https://discuss.streamlit.io/t/info-bar-running-function-appearing-unnecessarily-for-cached-function/6015
 
-# POS data of "東カフェテリア" are not necessarily continuous
-# because "東カフェテリア" is closed during vacation, 
-# so we cannot judge whether the user has not uploaded the whole date or
-# there is no record during the specific period in the first place.
 
 #-------------universal-------------
 
@@ -41,13 +40,16 @@ def button_controller(file_uploader_key: str) -> bool:
     Return `True` (disable button: "使用するデータを決定する") if files are not uploaded or empty.\\
     Otherwise, return `False` (enable button).
     """
+    # When no files have ever been uploaded
     if file_uploader_key not in st.session_state:
-        return True
+        return True # disable button
     else:
+        # When the session state "file_uploader_key" stores something other than empty or empty list
         if st.session_state[file_uploader_key]:
-            return False
+            return False # enable button
+        # When the session state "file_uploader_key" exits but is empty or empty list
         else:
-            return True
+            return True # disable button
 
 
 #----------------POS----------------
@@ -62,11 +64,14 @@ def when_zip_pos_changed() -> None:
     st.session_state["zip_pos_changed"] = True
 
 
-def load_uploaded_zip_pos(zip_files: list[UploadedFile]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_uploaded_zip_pos() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load the uploaded zip files and return DataFrames of checkouts, items, and payments.\\
     Each file of checktouts,csv, items.csv, and payments.csv is concatenated into a single DataFrame respectively.
     """
+    # load zip files from session state
+    zip_files: list[UploadedFile] = st.session_state["uploaded_zip_pos"]
+    # Initialize empty DataFrames
     df_checkouts = pd.DataFrame()
     df_items = pd.DataFrame()
     df_payments = pd.DataFrame()
@@ -100,7 +105,6 @@ def load_uploaded_zip_pos(zip_files: list[UploadedFile]) -> tuple[pd.DataFrame, 
                         if tmp.empty or tmp.isna().all().all():
                             continue
                         df_payments = pd.concat([df_payments, tmp], axis="index")
-
     return df_checkouts, df_items, df_payments
 
 
@@ -109,10 +113,12 @@ def cleanup_pos(df_checkouts: pd.DataFrame, df_items: pd.DataFrame, df_payments:
     Return cleanuped POS data.
     """
     # Filter columns
-    df_checkouts = df_checkouts[["アカウント名", "会計ID", "開始日時", "会計日時", 
-                                 "削除日時", "金額", "客数"]]
-    df_items = df_items[["会計ID", "SKU", "バーコード", 
-                         "名前", "数量", "金額", "部門"]]
+    df_checkouts = df_checkouts[
+        ["アカウント名", "会計ID", "開始日時", "会計日時", "削除日時", "金額", "客数"]
+    ]
+    df_items = df_items[
+        ["会計ID", "SKU", "バーコード",  "名前", "数量", "金額", "部門"]
+    ]
     df_payments = df_payments[["会計ID", "支払い方法"]]
 
     # Drop duplicates
@@ -166,22 +172,15 @@ def set_session_state_pos(df_cus: pd.DataFrame, df_itm: pd.DataFrame) -> None:
     """
     Set the session states related with POS data.
     """
+    # main DataFrames
     st.session_state["df_customers"] = df_cus
     st.session_state["df_items"] = df_itm
 
+    # These session states are used to show information about the uploaded POS data
     st.session_state["west_date_min"] = df_cus.query('アカウント名 == "西食堂"')["会計日時"].min()
     st.session_state["east_date_min"] = df_cus.query('アカウント名 == "東カフェテリア"')["会計日時"].min()
     st.session_state["west_date_max"] = df_cus.query('アカウント名 == "西食堂"')["会計日時"].max()
     st.session_state["east_date_max"] = df_cus.query('アカウント名 == "東カフェテリア"')["会計日時"].max()
-
-    #if "西食堂" in df_cus["アカウント名"].unique().tolist():
-    #    st.session_state["west_pos"] = True
-    #else:
-    #    st.session_state["west_pos"] = False
-    #if "東カフェテリア" in df_cus["アカウント名"].unique().tolist():
-    #    st.session_state["east_pos"] = True
-    #else:
-    #    st.session_state["east_pos"] = False
     
     stores = df_cus["アカウント名"].unique().tolist()
     if "西食堂" in stores:
@@ -209,9 +208,24 @@ def set_session_state_pos(df_cus: pd.DataFrame, df_itm: pd.DataFrame) -> None:
             st.session_state["max_date"] = st.session_state["east_date_max"]
 
 
-# future implementation
-def exclude_outlier():
-    return None
+def get_uploaded_pos_info() -> list[str]:
+    """
+    Return information about the uploaded POS data.
+    """
+    messages = []
+    if "df_customers" in st.session_state and st.session_state["west_pos"]:
+        messages.append(
+            f"{st.session_state['west_date_min'].strftime('%Y/%m/%d')}～{st.session_state['west_date_max'].strftime('%Y/%m/%d')}"
+        )
+    else:
+        messages.append("データはありません。")
+    if "df_customers" in st.session_state and st.session_state["east_pos"]:
+        messages.append(
+            f"{st.session_state['east_date_min'].strftime('%Y/%m/%d')}～{st.session_state['east_date_max'].strftime('%Y/%m/%d')}"
+        )
+    else:
+        messages.append("データはありません。")
+    return messages
 
 
 #--------------syllabus--------------
@@ -226,38 +240,16 @@ def when_syllabus_changed() -> None:
     st.session_state["syllabus_changed"] = True
 
 
-def load_uploaded_syllabus(file: UploadedFile) -> tuple[pd.DataFrame, pd.DataFrame]:
+def load_uploaded_syllabus() -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load the uploaded xlsx file of syllabus data and return DataFrames.
     """
+    # Load the xlsx file from session state
+    file: UploadedFile = st.session_state["uploaded_syllabus"]
+    # Read xlsx file
     df_syllabus_west = pd.read_excel(file, sheet_name="west", index_col=[0, 1])
     df_syllabus_east = pd.read_excel(file, sheet_name="east", index_col=[0, 1])
     return df_syllabus_west, df_syllabus_east
-
-
-def check_syllabus_range(df: pd.DataFrame) -> bool:
-    """
-    Return `True` if the range of the syllabus data is continuous and valid, otherwise `False`.
-    """
-    terms = ["SPR", "SMR", "AUT", "WTR"]
-    cols = sorted([[int(col[:4]), terms.index(col[4:]), col] for col in df.columns])
-    prev_year = cols[0][0]
-    prev_term_idx = cols[0][1]
-    for year, term_idx, _ in cols[1:]:
-        if year == prev_year:
-            if term_idx == prev_term_idx + 1:
-                prev_term_idx = term_idx
-            else:
-                return False
-        elif year == prev_year + 1:
-            if prev_term_idx == 3 and term_idx == 0:
-                prev_year = year
-                prev_term_idx = term_idx
-            else:
-                return False
-        else:
-            return False
-    return True
 
 
 def set_session_state_syllabus(df_slb_west: pd.DataFrame, df_slb_east: pd.DataFrame) -> None:
@@ -274,6 +266,26 @@ def set_session_state_syllabus(df_slb_west: pd.DataFrame, df_slb_east: pd.DataFr
     st.session_state["east_syllabus_range"] = [east_cols[0][2], east_cols[-1][2]]
 
 
+def get_uploaded_syllabus_info() -> list[str]:
+    """
+    Return information about the uploaded syllabus data.
+    """
+    messages = []
+    if "df_syllabus_west" in st.session_state:
+        messages.append(
+            f"{st.session_state['west_syllabus_range'][0]}～{st.session_state['west_syllabus_range'][1]}"
+        )
+    else:
+        messages.append("データはありません。")
+    if "df_syllabus_east" in st.session_state:
+        messages.append(
+            f"{st.session_state['east_syllabus_range'][0]}～{st.session_state['east_syllabus_range'][1]}"
+        )
+    else:
+        messages.append("データはありません。")
+    return messages
+
+
 #--------------calendar--------------
 
 def when_calendar_changed() -> None:
@@ -286,19 +298,40 @@ def when_calendar_changed() -> None:
     st.session_state["calendar_changed"] = True
 
 
-def load_uploaded_calendar(file: UploadedFile) -> pd.DataFrame:
+def load_uploaded_calendar() -> pd.DataFrame:
     """
-    Description
+    Load the uploaded xlsx file of calendar data and return a DataFrame.\\
+    If the file format is not correct, return an empty DataFrame.
     """
-    df_calendar = pd.read_excel(file)
-    return df_calendar
+    # Load the xlsx file from session state
+    file: UploadedFile = st.session_state["uploaded_calendar"]
+    cols = ["date", "academic_year", "term", "class", "info"]
+    df_cal = pd.read_excel(file)
+    for col in df_cal.columns:
+        if col not in cols:
+            return pd.DataFrame()
+    return df_cal
 
 
 def set_session_state_calendar(df_cal: pd.DataFrame) -> None:
     """
-    Description
+    Set the session states related with calendar data.
     """
     st.session_state["df_calendar"] = df_cal
+    st.session_state["calendar_range"] = [
+        df_cal["date"].min().strftime("%Y/%m/%d"), 
+        df_cal["date"].max().strftime("%Y/%m/%d")
+    ]
+
+
+def get_uploaded_calendar_info() -> str:
+    """
+    Return information about the uploaded calendar data.
+    """
+    if "df_calendar" in st.session_state:
+        return f"{st.session_state['calendar_range'][0]}～{st.session_state['calendar_range'][1]}"
+    else:
+        return "データはありません。"
 
 
 #-----------------------------------------Contents-----------------------------------------
@@ -311,14 +344,16 @@ if "syllabus_changed" not in st.session_state:
 if "calendar_changed" not in st.session_state:
     st.session_state["calendar_changed"] = False
 
+# logo in the sidebar
 st.logo(favicon, size="large")
-st.title("データアップロード")
 
-# upload POS data
+st.header("データアップロード")
+
+# Upload POS data
 with st.container(border=True):
     st.subheader(":material/point_of_sale: POSデータ")
     st.file_uploader(
-        label="ユビレジアプリからエクスポートした`.zip`ファイル（`.csv`形式）をアップロードしてください。", 
+        label="ユビレジからエクスポートした`.zip`ファイル（`.csv`形式）をアップロードしてください。", 
         type=["zip"], 
         accept_multiple_files=True, 
         key="uploaded_zip_pos", 
@@ -327,75 +362,40 @@ with st.container(border=True):
     if st.button(label="使用するデータを決定する", key="button_pos", disabled=button_controller("uploaded_zip_pos")):
         with st.spinner("データを読み込んでいます...", show_time=True):
             try:
-                df_checkouts, df_items, df_payments = load_uploaded_zip_pos(st.session_state["uploaded_zip_pos"])
+                df_checkouts, df_items, df_payments = load_uploaded_zip_pos()
                 if df_checkouts.shape[0] > 0:
-                    df_customers, df_items = cleanup_pos(df_checkouts, df_items, df_payments)
-                    set_session_state_pos(df_customers, df_items)
-                    if st.session_state["west_pos"]:
-                        if st.session_state["east_pos"]:
-                            messages = [
-                                f"{st.session_state['west_date_min'].strftime('%Y/%m/%d')}～{st.session_state['west_date_max'].strftime('%Y/%m/%d')}", 
-                                f"{st.session_state['east_date_min'].strftime('%Y/%m/%d')}～{st.session_state['east_date_max'].strftime('%Y/%m/%d')}"
-                            ]
-                        else:
-                            messages = [
-                                f"{st.session_state['west_date_min'].strftime('%Y/%m/%d')}～{st.session_state['west_date_max'].strftime('%Y/%m/%d')}", 
-                                "データはありません。"
-                            ]
-                    else:
-                        messages = [
-                            "データはありません。", 
-                            f"{st.session_state['east_date_min'].strftime('%Y/%m/%d')}～{st.session_state['east_date_max'].strftime('%Y/%m/%d')}"
-                        ]
-                    st.success(
-                        f"""
-                        :material/check_circle: 以下のPOSデータのアップロードが完了しました。
-                         - 西食堂：{messages[0]}
-                         - 東カフェテリア：{messages[1]}
+                    df_cus, df_itm = cleanup_pos(df_checkouts, df_items, df_payments)
+                    set_session_state_pos(df_cus, df_itm)
+                    st.session_state["zip_pos_changed"] = False
+                else:
+                    st.error(
+                        """
+                        データの読み込みに失敗しました。\\
+                        アップロードされたファイルには有効なデータが含まれていません。
                         """
                     )
                     st.session_state["zip_pos_changed"] = False
-
-                else:
-                    st.error("アップロードされたファイルには有効なデータが含まれていません。")
-                    st.session_state["zip_pos_changed"] = False
-
-            except Exception as e:
-                st.error("データの読み込みに失敗しました。")
-                st.write(e)
-    else:
-        # This message is shown when the user come back from other pages to this page
-        # only if the user has not changed the uploaded files since the last successful upload.
-        # If the user changed the files, this message disappears.
-        if "df_customers" in st.session_state and not st.session_state["zip_pos_changed"]:
-            if st.session_state["west_pos"]:
-                if st.session_state["east_pos"]:
-                    messages = [
-                        f"{st.session_state['west_date_min'].strftime('%Y/%m/%d')}～{st.session_state['west_date_max'].strftime('%Y/%m/%d')}", 
-                        f"{st.session_state['east_date_min'].strftime('%Y/%m/%d')}～{st.session_state['east_date_max'].strftime('%Y/%m/%d')}"
-                    ]
-                else:
-                    messages = [
-                        f"{st.session_state['west_date_min'].strftime('%Y/%m/%d')}～{st.session_state['west_date_max'].strftime('%Y/%m/%d')}", 
-                        "データはありません。"
-                    ]
-            else:
-                messages = [
-                    "データはありません。", 
-                    f"{st.session_state['east_date_min'].strftime('%Y/%m/%d')}～{st.session_state['east_date_max'].strftime('%Y/%m/%d')}"
-                ]
-            st.success(
-                f"""
-                :material/check_circle: 以下のPOSデータのアップロードが完了しています。
-                 - 西食堂：{messages[0]}
-                 - 東カフェテリア：{messages[1]}
-                """
-            )    
+            except:
+                st.error(
+                    """
+                    データの読み込みに失敗しました。\\
+                    データ形式が正しくない可能性があります。
+                    """
+                )
+    # Information about the uploaded POS data
+    messages = get_uploaded_pos_info()
+    st.info(
+        f"""
+        :material/check_circle: アップロードされているPOSデータ
+         - 西食堂：{messages[0]}
+         - 東カフェテリア：{messages[1]}
+        """
+    )
 
 # space
 st.write("")
 
-# upload syllabus data
+# Upload syllabus data
 with st.container(border=True):
     st.subheader(":material/school: 履修者数データ")
     st.file_uploader(
@@ -408,64 +408,35 @@ with st.container(border=True):
     if st.button(label="使用するデータを決定する", key="button_syllabus", disabled=button_controller("uploaded_syllabus")):
         with st.spinner("データを読み込んでいます...", show_time=True):
             try:
-                df_slb_west, df_slb_east = load_uploaded_syllabus(st.session_state["uploaded_syllabus"])
-                if not check_syllabus_range(df_slb_west):
-                    if not check_syllabus_range(df_slb_east):
-                        st.error(
-                            """
-                            東西キャンパスの履修者数データの期間が連続していません。\\
-                            データを確認してください。\\
-                            例：2025SPR, 2025SMR, 2024WTRの履修者数データは記録されているが、2025AUTのデータが抜けているなど。
-                            """
-                        )
-                    else:
-                        st.error(
-                            """
-                            西キャンパスの履修者数データの期間が連続していません。\\
-                            データを確認してください。\\
-                            例：2025SPR, 2025SMR, 2024WTRの履修者数データは記録されているが、2025AUTのデータが抜けているなど。
-                            """
-                        )
-                elif not check_syllabus_range(df_slb_east):
+                df_slb_west, df_slb_east = load_uploaded_syllabus()
+                if not df_slb_west.empty and not df_slb_east.empty:
+                    set_session_state_syllabus(df_slb_west, df_slb_east)
+                    st.session_state["syllabus_changed"] = False
+                else:
                     st.error(
                         """
-                        東キャンパスの履修者数データの期間が連続していません。\\
-                        データを確認してください。\\
-                        例：2025SPR, 2025SMR, 2024WTRの履修者数データは記録されているが、2025AUTのデータが抜けているなど。
-                        """
-                    )
-                else:
-                    set_session_state_syllabus(df_slb_west, df_slb_east)
-                    st.success(
-                        f"""
-                        :material/check_circle: 以下の履修者数データのアップロードが完了しました。
-                         - 西キャンパス：{st.session_state["west_syllabus_range"][0]}～{st.session_state["west_syllabus_range"][1]}
-                         - 東キャンパス：{st.session_state["east_syllabus_range"][0]}～{st.session_state["east_syllabus_range"][1]}
+                        データの読み込みに失敗しました。\\
+                        アップロードしたファイルに有効なデータが含まれていることを確認してください。
                         """
                     )
                     st.session_state["syllabus_changed"] = False
-            except Exception as e:
+            except:
                 st.error(
                     """
                     データの読み込みに失敗しました。\\
                     データ形式が正しくない可能性があります。
                     """
                 )
-                st.write(e)
-    else:
-        # This message is shown when the user come back from other pages to this page
-        # only if the user has not changed the uploaded files since the last successful upload.
-        # If the user changed the files, this message disappears.
-        if "df_syllabus_west" in st.session_state or "df_syllabus_east" in st.session_state:
-            if not st.session_state["syllabus_changed"]:
-                st.success(
-                    f"""
-                    :material/check_circle: 以下の履修者数データのアップロードが完了しています。
-                     - 西キャンパス：{st.session_state["west_syllabus_range"][0]}～{st.session_state["west_syllabus_range"][1]}
-                     - 東キャンパス：{st.session_state["east_syllabus_range"][0]}～{st.session_state["east_syllabus_range"][1]}
-                    """
-                )
-    
+    # Information about the uploaded POS data
+    messages = get_uploaded_syllabus_info()
+    st.info(
+        f"""
+        :material/check_circle: アップロードされている履修者数データ
+         - 西キャンパス：{messages[0]}
+         - 東キャンパス：{messages[1]}
+        """
+    )
+    # About file format
     with st.expander(":material/warning: （重要）ファイル形式について"):
         st.markdown(
             """
@@ -499,9 +470,7 @@ with st.container(border=True):
                         "2025AUT": np.random.randint(100, 500, size=25), 
                         "2025WTR": np.random.randint(100, 500, size=25)
                     }
-                ), 
-                hide_index=True, 
-                use_container_width=True
+                ).set_index(["曜日", "時限"])
             )
         with tab2:
             st.dataframe(
@@ -518,9 +487,7 @@ with st.container(border=True):
                         "2025AUT": np.random.randint(100, 500, size=25), 
                         "2025WTR": np.random.randint(100, 500, size=25)
                     }
-                ), 
-                hide_index=True, 
-                use_container_width=True
+                ).set_index(["曜日", "時限"])
             )
 
 #space
@@ -539,39 +506,34 @@ with st.container(border=True):
     if st.button(label="使用するデータを決定する", key="button_calendar", disabled=button_controller("uploaded_calendar")):
         with st.spinner("データを読み込んでいます...", show_time=True):
             try:
-                df_calendar = load_uploaded_calendar(st.session_state["uploaded_calendar"])
-                if df_calendar.empty:
-                    st.error("アップロードされたファイルには有効なデータが含まれていません。")
+                df_cal = load_uploaded_calendar()
+                if not df_cal.empty:
+                    set_session_state_calendar(df_cal)
+                    st.session_state["calendar_changed"] = False
                 else:
-                    set_session_state_calendar(df_calendar)
-                    st.success(
-                        f"""
-                        :material/check_circle: 以下のカレンダー形式データのアップロードが完了しました。
-                         - 期間：{st.session_state["df_calendar"]["date"].min().strftime("%Y/%m/%d")}～
-                         {st.session_state["df_calendar"]["date"].max().strftime("%Y/%m/%d")}
+                    st.error(
+                        """
+                        データの読み込みに失敗しました。\\
+                        アップロードされたファイルには有効なデータが含まれていません。
                         """
                     )
                     st.session_state["calendar_changed"] = False
-            except Exception as e:
+            except:
                 st.error(
                     """
                     データの読み込みに失敗しました。\\
                     データ形式が正しくない可能性があります。
                     """
                 )
-                st.write(e)
-    else:
-        # This message is shown when the user come back from other pages to this page
-        # only if the user has not changed the uploaded files since the last successful upload.
-        # If the user changed the files, this message disappears.
-        if "df_calendar" in st.session_state and not st.session_state["calendar_changed"]:
-            st.success(
-                f"""
-                :material/check_circle: 以下のカレンダー形式データのアップロードが完了しています。
-                 - 期間：{st.session_state["df_calendar"]["date"].min().strftime("%Y/%m/%d")}～
-                 {st.session_state["df_calendar"]["date"].max().strftime("%Y/%m/%d")}
-                """
-            )
+    # Information about the uploaded calendar data
+    message = get_uploaded_calendar_info()
+    st.info(
+        f"""
+        :material/check_circle: アップロードされているカレンダー形式データ
+         - 期間：{message}
+        """
+    )
+    # About file format
     with st.expander(":material/warning: （重要）ファイル形式について"):
         st.markdown(
             """
@@ -604,7 +566,6 @@ with st.container(border=True):
                     "info": ["TOEFL"] + [pd.NA] * 29
                 }
             ), 
-            hide_index=True, 
-            use_container_width=True
+            hide_index=True
         )
 
