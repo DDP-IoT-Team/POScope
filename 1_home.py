@@ -4,7 +4,11 @@ from PIL import Image
 
 #-----------------------------------------Settings-----------------------------------------
 
+# Load an image
 favicon = Image.open("static/favicon.ico")
+logo = Image.open("static/logo.png")
+
+# Page configuration
 st.set_page_config(
     page_title="ホーム", 
     layout="centered",
@@ -21,7 +25,6 @@ st.set_page_config(
 #-----------------------------------------Contents-----------------------------------------
 
 # App name and logo
-logo = Image.open("static/logo.png")
 st.image(logo)
 
 # Logo in the sidebar
