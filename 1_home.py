@@ -90,32 +90,3 @@ with col2:
         hamburger = Image.open("static/hamburger_on_island.png")
         st.image(hamburger)
 
-# space
-# st.text("")
-
-# Known issues
-# with st.container(border=True):
-#     st.write("##### :material/bug_report: Known Issues")
-#     st.markdown(
-#         """
-#          - 期間が連続していないPOSデータ（4月分と6月分など）をアップロードした際に、min_dateとmax_dateの間に
-#          含まれる、存在しない日付が選択された際の挙動
-#          - データ可視化のセクションにて、夜営業 + 東カフェテリアでのエラー
-#          - 夜学食の客数が、客数供給高のデータと比べて妙に少ない（処理はミスってない）
-#         """
-#     )
-
-# space
-# st.text("")
-
-# Future implementations
-# with st.container(border=True):
-#     st.write("##### :material/event_upcoming: Future Implementations")
-#     st.markdown(
-#         """
-#          - データの日本語化
-#          - サンプルデータの追加（カレンダーデータはアプリ内に組み込む？）
-#          - 効果測定の機能
-#         """
-#     )
-
