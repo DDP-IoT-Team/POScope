@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 from PIL import Image
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 #-----------------------------------------Settings-----------------------------------------
@@ -10,6 +11,7 @@ import plotly.graph_objects as go
 # Load images
 favicon = Image.open("static/favicon.ico")
 sleeping = Image.open("static/sleeping_hamburger.png")
+sleeping_no_syllabus = Image.open("static/sleeping_hamburger_no_syllabus_data.png")
 
 # Page configuration
 st.set_page_config(
@@ -284,6 +286,66 @@ def candidates_itm2(df_itm: pd.DataFrame):
     candidates = df_itm["部門"].unique().tolist()
     return candidates
 
+#---------------Syllabus data---------------
+
+def candidates_syl() -> list[str]:
+    """
+    Get a list of possible candidates of academic years for the syllabus data.
+    """
+    # Get syllabus data from session state
+    df_syl_west: pd.DataFrame = st.session_state["df_syllabus_west"]
+    df_syl_east: pd.DataFrame = st.session_state["df_syllabus_east"]
+    # Get years from the columns
+    west_years = df_syl_west.columns.str[:4].astype(int).tolist()
+    east_years = df_syl_east.columns.str[:4].astype(int).tolist()
+    years = sorted(set(west_years + east_years))
+    return [str(year) + "年度" for year in years]
+
+
+def sort_term(terms: list[str]) -> list[str]:
+    """
+    Sort terms in chronological order.
+    """
+    seasons = ["SPR", "SMR", "AUT", "WTR"]
+    sorted_terms = sorted(terms, key=lambda x: (int(x[:4]), seasons.index(x[4:])))
+    return sorted_terms
+
+
+def process_syllabus():
+    """
+    Filter west and east syllabus DataFrames based on the selected options and return a list of DataFrames for visualization of syllabus data.\\
+    If no valid data is found, return a list of empty DataFrames.
+    """
+    # Get syllabus data from session state
+    df_syl_west: pd.DataFrame = st.session_state["df_syllabus_west"].copy()
+    df_syl_east: pd.DataFrame = st.session_state["df_syllabus_east"].copy()
+    # Get options from session state
+    class_period = st.session_state["class_period"]
+    year = st.session_state["year"]
+    if class_period == [] or year == []:
+        return [pd.DataFrame()] * 2
+    else:
+        class_period_num = [int(cp[0]) for cp in class_period]
+        year_num = [y[:4] for y in year]
+        # Filter the DataFrame by class period
+        df_syl_west_filtered = df_syl_west.loc[(["月", "火", "水", "木", "金"], class_period_num), :]
+        df_syl_east_filtered = df_syl_east.loc[(["月", "火", "水", "木", "金"], class_period_num), :]
+        # Filter the DataFrame by year
+        df_syl_west_filtered = df_syl_west_filtered.loc[:, df_syl_west_filtered.columns.str[:4].isin(year_num)]
+        df_syl_east_filtered = df_syl_east_filtered.loc[:, df_syl_east_filtered.columns.str[:4].isin(year_num)]
+        # Group by day of the week and sum the values
+        df_syl_west_filtered = df_syl_west_filtered.groupby(by="曜日").sum()
+        df_syl_east_filtered = df_syl_east_filtered.groupby(by="曜日").sum()
+        # Sort indices
+        df_syl_west_filtered = df_syl_west_filtered.reindex(index=["月", "火", "水", "木", "金"])
+        df_syl_east_filtered = df_syl_east_filtered.reindex(index=["月", "火", "水", "木", "金"])
+        # Sort columns
+        west_cols = sort_term(df_syl_west_filtered.columns.tolist())
+        east_cols = sort_term(df_syl_east_filtered.columns.tolist())
+        df_syl_west_filtered = df_syl_west_filtered.reindex(columns=west_cols)
+        df_syl_east_filtered = df_syl_east_filtered.reindex(columns=east_cols)
+        return [df_syl_west_filtered, df_syl_east_filtered]
+
 
 #-----------------------------------------Contents-----------------------------------------
 
@@ -353,7 +415,7 @@ with st.container(border=True):
                 # Plotly
                 fig = go.Figure()
                 # tab:orange for "西食堂" and tab:blue for "東カフェテリア"
-                colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+                colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
                 for date in df_cus_time.columns:
                     if date.weekday() in [5, 6] or date in exclude_dates:  # Saturday and Sunday
                         continue
@@ -452,7 +514,7 @@ with st.container(border=True):
                     # Plotly
                     fig = go.Figure()
                     # tab:orange for "西食堂" and tab:blue for "東カフェテリア"
-                    colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+                    colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
                     for store in stores:
                         fig.add_trace(go.Scatter(
                             x=df_cus_day.index, 
@@ -470,7 +532,7 @@ with st.container(border=True):
                     # Plotly
                     fig = go.Figure()
                     # tab:orange for "西食堂" and tab:blue for "東カフェテリア"
-                    colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+                    colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
                     for store in stores:
                         fig.add_trace(go.Scatter(
                             x=df_cus_day.index, 
@@ -637,7 +699,7 @@ with st.container(border=True):
                     # Plotly
                     fig = go.Figure()
                     # tab:orange for "西食堂" and tab:blue for "東カフェテリア"
-                    colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+                    colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
                     for store in stores:
                         fig.add_trace(go.Scatter(
                             x=df_sales_itm.index, 
@@ -657,7 +719,7 @@ with st.container(border=True):
                     # Plotly
                     fig = go.Figure()
                     # tab:orange for "西食堂" and tab:blue for "東カフェテリア"
-                    colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+                    colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
                     for store in stores:
                         fig.add_trace(go.Scatter(
                             x=df_sales_itm.index, 
@@ -760,7 +822,7 @@ with st.container(border=True):
                     # Plotly
                     fig = go.Figure()
                     # tab:orange for "西食堂" and tab:blue for "東カフェテリア"
-                    colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+                    colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
                     for store in stores:
                         fig.add_trace(go.Scatter(
                             x=df_sales_dep.index, 
@@ -780,7 +842,7 @@ with st.container(border=True):
                     # Plotly
                     fig = go.Figure()
                     # tab:orange for "西食堂" and tab:blue for "東カフェテリア"
-                    colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+                    colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
                     for store in stores:
                         fig.add_trace(go.Scatter(
                             x=df_sales_dep.index, 
@@ -812,4 +874,99 @@ with st.container(border=True):
                 mime="text/csv"
             )
 
-# 曜日ごとの履修者数と客数
+# space
+st.write("")
+
+# 6. syllabus data
+with st.container(border=True):
+    st.write("##### 曜日ごとの対面講義履修者数")
+    # When syllabus data is not available
+    if "df_syllabus_west" not in st.session_state or "df_syllabus_east" not in st.session_state:
+        with st.container(border=True):
+            st.image(sleeping_no_syllabus)
+    # When syllabus data is available
+    else:
+        # Options
+        with st.container(border=True):
+            st.multiselect(
+                label=":material/school: 時限", 
+                options=["1限", "2限", "3限", "4限", "5限"], 
+                default=["1限", "2限", "3限", "4限", "5限"], 
+                key="class_period"
+            )
+            year_candidates = candidates_syl()
+            st.multiselect(
+                label=":material/event: 年度", 
+                options=year_candidates, 
+                default=year_candidates[0], 
+                max_selections=3, 
+                key="year", 
+                help="最大3つまで選択できます。"
+            )
+        # Data processing and visualization
+        with st.container(border=True):
+            df_syl_west, df_syl_east = process_syllabus()
+            if not df_syl_west.empty or not df_syl_east.empty:
+                years = [y[:4] for y in st.session_state["year"]]
+                terms = ["SPR", "SMR", "AUT", "WTR"]
+                titles = ["春学期", "夏学期", "秋学期", "冬学期"]
+                colors = [
+                    [(255, 127, 14), (255, 172, 100), (255, 211, 172)], 
+                    [(0, 104, 201), (107, 176, 241), (181, 219, 255)]
+                ]
+                fig = make_subplots(
+                    rows=2, cols=4, 
+                    subplot_titles=["春学期", "夏学期", "秋学期", "冬学期", "", "", "", ""], 
+                    shared_yaxes=True
+                )
+                # Plotly
+                for n_row, syl in enumerate([df_syl_west, df_syl_east]):
+                    for j, year in enumerate(years):
+                        for i, term in enumerate(terms):
+                            try:
+                                week = syl.loc[:, year + term]
+                                fig.add_trace(go.Bar(
+                                    x=week.index, 
+                                    y=week.values, 
+                                    marker=dict(color=f"rgba({colors[n_row][j][0]}, {colors[n_row][j][1]}, {colors[n_row][j][2]}, 1)"), 
+                                    hovertemplate="対面講義履修者数: %{y:,}人<extra></extra>", 
+                                    name=year + "年度", 
+                                    showlegend=True if i == 0 else False, 
+                                    hoverlabel=dict(font=dict(size=15))
+                                ), row=n_row+1, col=i+1)
+                            except KeyError:
+                                fig.add_trace(go.Bar(
+                                    x=["月", "火", "水", "木", "金"], 
+                                    y=[0, 0, 0, 0, 0], 
+                                    marker=dict(color=f"rgba({colors[n_row][j][0]}, {colors[n_row][j][1]}, {colors[n_row][j][2]}, 1)"), 
+                                    hovertemplate="データなし<extra></extra>", 
+                                    name=year + "年度", 
+                                    showlegend=True if i == 0 else False, 
+                                    hoverlabel=dict(font=dict(size=15))
+                                ), row=n_row+1, col=i+1)
+                fig.update_layout(barmode="group")
+                fig.update_yaxes(title_text="西キャンパス", row=1, col=1)
+                fig.update_yaxes(title_text="東キャンパス", row=2, col=1)
+                st.plotly_chart(fig)
+            else:
+                st.image(sleeping)
+        # Data
+        with st.expander("データを見る", expanded=False):
+            tab1, tab2 = st.tabs(["西キャンパス", "東キャンパス"])
+            with tab1:
+                st.dataframe(df_syl_west)
+                st.download_button(
+                    label=":material/download: `.csv`でダウンロード", 
+                    data=convert_for_download(df_syl_west, index_flag=True), 
+                    file_name=f"syllabus_west.csv", 
+                    mime="text/csv"
+                )
+            with tab2:
+                st.dataframe(df_syl_east)
+                st.download_button(
+                    label=":material/download: `.csv`でダウンロード", 
+                    data=convert_for_download(df_syl_east, index_flag=True), 
+                    file_name=f"syllabus_east.csv", 
+                    mime="text/csv"
+                )
+
