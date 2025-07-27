@@ -378,7 +378,7 @@ with st.container(border=True):
             st.session_state["model_trained"] = True
     # Plot graph
     with st.container(border=True):
-        colors = {"西食堂": "rgba(255, 127, 14, 0.5)", "東カフェテリア": "rgba(0, 104, 201, 0.5)"}
+        colors = {"西食堂": "rgba(255, 127, 14, 0.7)", "東カフェテリア": "rgba(0, 104, 201, 0.7)"}
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=yX_tr.index, 
