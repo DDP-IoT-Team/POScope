@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", 
     page_icon=favicon, 
     menu_items={
-        'Get help': "https://ddp-iot-team.github.io/POScope/", # Documentation
+        'Get help': st.secrets["documentation"]["notion_site"], # Documentation
         'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
@@ -353,7 +353,7 @@ st.header("データアップロード")
 with st.container(border=True):
     st.subheader(":material/point_of_sale: POSデータ")
     st.file_uploader(
-        label="ユビレジからエクスポートした`.zip`ファイル（`.csv`形式）をアップロードしてください。", 
+        label="ユビレジからエクスポートした`ZIP`ファイル（`CSV`形式）をアップロードしてください。", 
         type=["zip"], 
         accept_multiple_files=True, 
         key="uploaded_zip_pos", 
@@ -399,7 +399,7 @@ st.write("")
 with st.container(border=True):
     st.subheader(":material/school: 履修者数データ")
     st.file_uploader(
-        label="対面講義履修者数のデータを含む`.xlsx`ファイルをアップロードしてください。", 
+        label="対面講義履修者数のデータを含む`XLSX`ファイルをアップロードしてください。", 
         type=["xlsx"], 
         accept_multiple_files=False, 
         key="uploaded_syllabus", 
@@ -437,11 +437,11 @@ with st.container(border=True):
         """
     )
     # About file format
-    with st.expander(":material/warning: （重要）ファイル形式について"):
+    with st.expander(":material/warning: （重要）データの形式について"):
         st.markdown(
             """
             東西キャンパスにおける、各年度・学期・曜日・時限の対面講義履修者数が1つにまとめられた
-            `.xlsx`ファイルをアップロードする必要があります。
+            `XLSX`ファイルをアップロードする必要があります。
             形式が正しくない場合、ファイルを読み込むことができませんのでご注意ください。
 
             ファイルの形式は以下の通りです。
@@ -497,7 +497,7 @@ st.write("")
 with st.container(border=True):
     st.subheader(":material/calendar_month: カレンダー形式データ")
     st.file_uploader(
-        label="カレンダー形式のデータを含む`.xlsx`ファイルをアップロードしてください。", 
+        label="カレンダー形式のデータを含む`XLSX`ファイルをアップロードしてください。", 
         type=["xlsx"], 
         accept_multiple_files=False, 
         key="uploaded_calendar", 
@@ -534,11 +534,11 @@ with st.container(border=True):
         """
     )
     # About file format
-    with st.expander(":material/warning: （重要）ファイル形式について"):
+    with st.expander(":material/warning: （重要）データの形式について"):
         st.markdown(
             """
-            各日付に対して、年度・学期・授業情報などを記録した`.xlsx`ファイルをアップロードする必要があります。
-            
+            各日付に対して、年度・学期・授業情報などを記録した`XLSX`ファイルをアップロードする必要があります。
+
             ファイルの形式は以下の通りです。
              - `date`, `academic_year`, `term`, `class`, `info`の5つの列を持つ。
              - `date`：日付（YYYY/MM/DD）

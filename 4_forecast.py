@@ -22,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", 
     page_icon=favicon, 
     menu_items={
-        'Get help': "https://ddp-iot-team.github.io/POScope/", # Documentation
+        'Get help': st.secrets["documentation"]["notion_site"], # Documentation
         'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
@@ -231,6 +231,7 @@ def split_data(df_main: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     yX_tr = df_main[
         (df_main["客数"].notna()) & 
+        (df_main["客数"] > 0) & 
         (df_main["class"].isin(["MON", "TUE", "WED", "THU", "FRI"])) & 
         (df_main["syllabus"].notna())
     ]
@@ -282,7 +283,7 @@ def convert_for_download(df: pd.DataFrame, index_flag: bool) -> bytes:
 # logo in the sidebar
 st.logo(favicon, size="large")
 
-st.header("1日当たりの客数予測",divider="gray")
+st.header("1日当たりの客数予測")
 
 # Check if the required files are uploaded
 not_uploaded_files = check_uploaded_files()

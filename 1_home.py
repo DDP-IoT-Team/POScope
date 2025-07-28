@@ -7,6 +7,7 @@ from PIL import Image
 # Load an image
 favicon = Image.open("static/favicon.ico")
 logo = Image.open("static/logo.png")
+hamburger = Image.open("static/hamburger_on_island.png")
 
 # Page configuration
 st.set_page_config(
@@ -15,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", 
     page_icon=favicon, 
     menu_items={
-        'Get help': "https://ddp-iot-team.github.io/POScope/", # Documentation
+        'Get help': st.secrets["documentation"]["notion_site"], # Documentation
         'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
@@ -56,8 +57,8 @@ with col1:
     with st.container(border=True):
         st.write("##### :material/menu_book: アプリの使い方について")
         st.markdown(
-            """
-             - [https://ddp-iot-team.github.io/POScope/](https://ddp-iot-team.github.io/POScope/)
+            f"""
+             - ドキュメンテーションは[こちら]({st.secrets["documentation"]["notion_site"]})
             """
         )
 # Feature requests
@@ -66,7 +67,7 @@ with col2:
         st.write("##### :material/lightbulb: 機能改善の要望")
         st.markdown(
             f"""
-             - {st.secrets["google_forms"]["feature_request"]}
+             - Google Formsは[こちら]({st.secrets["google_forms"]["feature_request"]})
             """
         )
 
@@ -81,12 +82,22 @@ with col1:
         st.write("##### :material/bug_report: バグ報告")
         st.markdown(
             f"""
-             - {st.secrets["google_forms"]["report_a_bug"]}
+             - Google Formsは[こちら]({st.secrets["google_forms"]["report_a_bug"]})
             """
         )
-# Hamburger on island
+# Contact
 with col2:
     with st.container(border=True):
-        hamburger = Image.open("static/hamburger_on_island.png")
-        st.image(hamburger)
+        st.write("##### :material/contact_mail: お問い合わせ")
+        st.markdown(
+            f"""
+             - Google Formsは[こちら]({st.secrets["google_forms"]["get_help"]})
+            """
+        )
+
+# space
+st.text("")
+
+# Hamburger on island
+st.image(hamburger)
 

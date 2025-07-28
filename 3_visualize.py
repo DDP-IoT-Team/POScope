@@ -20,7 +20,7 @@ st.set_page_config(
     initial_sidebar_state="expanded", 
     page_icon=favicon, 
     menu_items={
-        'Get help': "https://ddp-iot-team.github.io/POScope/", # Documentation
+        'Get help': st.secrets["documentation"]["notion_site"], # Documentation
         'Report a bug': st.secrets["google_forms"]["report_a_bug"], # Google Forms
         'About': "#### POScope \nv1.0.0"
     }
