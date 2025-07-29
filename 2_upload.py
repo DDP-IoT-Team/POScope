@@ -177,10 +177,10 @@ def set_session_state_pos(df_cus: pd.DataFrame, df_itm: pd.DataFrame) -> None:
     st.session_state["df_items"] = df_itm
 
     # These session states are used to show information about the uploaded POS data
-    st.session_state["west_date_min"] = df_cus.query('アカウント名 == "西食堂"')["会計日時"].min()
-    st.session_state["east_date_min"] = df_cus.query('アカウント名 == "東カフェテリア"')["会計日時"].min()
-    st.session_state["west_date_max"] = df_cus.query('アカウント名 == "西食堂"')["会計日時"].max()
-    st.session_state["east_date_max"] = df_cus.query('アカウント名 == "東カフェテリア"')["会計日時"].max()
+    st.session_state["west_date_min"] = df_cus.query('アカウント名 == "西食堂"')["開始日時"].min()
+    st.session_state["east_date_min"] = df_cus.query('アカウント名 == "東カフェテリア"')["開始日時"].min()
+    st.session_state["west_date_max"] = df_cus.query('アカウント名 == "西食堂"')["開始日時"].max()
+    st.session_state["east_date_max"] = df_cus.query('アカウント名 == "東カフェテリア"')["開始日時"].max()
     
     stores = df_cus["アカウント名"].unique().tolist()
     if "西食堂" in stores:
