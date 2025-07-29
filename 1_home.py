@@ -91,7 +91,7 @@ with col2:
         st.write("##### :material/contact_mail: お問い合わせ")
         st.markdown(
             f"""
-             - Google Formsは[こちら]({st.secrets["google_forms"]["get_help"]})
+             - Google Formsは[こちら]({st.secrets["google_forms"]["contact"]})
             """
         )
 
